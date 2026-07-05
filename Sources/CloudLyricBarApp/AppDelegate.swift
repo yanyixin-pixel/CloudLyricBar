@@ -3,6 +3,7 @@ import CloudLyricBarCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var viewModel: CloudLyricBarViewModel?
     private var statusBarController: StatusBarController?
     private var lyricRefreshTask: Task<Void, Never>?
 
@@ -23,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             nowPlayingProvider: nowPlayingProvider
         )
         let popoverController = PopoverController(viewModel: viewModel)
+        self.viewModel = viewModel
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)
         lyricRefreshTask = Task { @MainActor [weak viewModel] in
             while !Task.isCancelled {
