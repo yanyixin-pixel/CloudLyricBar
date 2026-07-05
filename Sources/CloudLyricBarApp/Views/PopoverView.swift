@@ -10,6 +10,7 @@ struct PopoverView: View {
             playbackControls
             lyricContext
             statusMessage
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(width: 360, height: 220)
@@ -26,12 +27,16 @@ struct PopoverView: View {
                 Text(viewModel.currentSong?.title ?? "未播放")
                     .font(.headline)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 Text(viewModel.currentSong?.artist ?? "打开网易云音乐后开始同步")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(height: 52)
     }
 
     private var playbackControls: some View {
@@ -47,6 +52,7 @@ struct PopoverView: View {
             }
         }
         .buttonStyle(.borderless)
+        .frame(height: 26)
     }
 
     private var lyricContext: some View {
@@ -55,14 +61,21 @@ struct PopoverView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16, alignment: .leading)
             Text(viewModel.lyricContext.current?.text ?? "暂无同步歌词")
                 .font(.body)
                 .lineLimit(2)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44, alignment: .leading)
             Text(viewModel.lyricContext.next?.text ?? " ")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, minHeight: 84, maxHeight: 84, alignment: .topLeading)
     }
 
     @ViewBuilder
@@ -71,6 +84,13 @@ struct PopoverView: View {
             Text(message)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, minHeight: 18, maxHeight: 18, alignment: .leading)
+        } else {
+            Text(" ")
+                .font(.caption)
+                .frame(maxWidth: .infinity, minHeight: 18, maxHeight: 18, alignment: .leading)
         }
     }
 }
