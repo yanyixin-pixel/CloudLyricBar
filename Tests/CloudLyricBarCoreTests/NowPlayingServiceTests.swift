@@ -11,6 +11,10 @@ let nowPlayingServiceTests: [TestCase] = [
         run: NowPlayingServiceTests.testPausedSnapshotDoesNotAdvance
     ),
     TestCase(
+        name: "NowPlayingServiceTests.testStoppedSnapshotDoesNotAdvance",
+        run: NowPlayingServiceTests.testStoppedSnapshotDoesNotAdvance
+    ),
+    TestCase(
         name: "NowPlayingServiceTests.testNilPositionDoesNotAdvance",
         run: NowPlayingServiceTests.testNilPositionDoesNotAdvance
     ),
@@ -48,6 +52,22 @@ enum NowPlayingServiceTests {
         let snapshot = NowPlayingSnapshot(
             song: sampleSong,
             playback: .paused,
+            position: 10,
+            capturedAt: Date(timeIntervalSince1970: 100)
+        )
+
+        let estimated = TimerPositionEstimator.estimate(
+            from: snapshot,
+            at: Date(timeIntervalSince1970: 104.25)
+        )
+
+        try expectEqual(estimated, snapshot)
+    }
+
+    static func testStoppedSnapshotDoesNotAdvance() throws {
+        let snapshot = NowPlayingSnapshot(
+            song: sampleSong,
+            playback: .stopped,
             position: 10,
             capturedAt: Date(timeIntervalSince1970: 100)
         )
@@ -105,14 +125,17 @@ enum NowPlayingServiceTests {
             )
         )
 
+        let before = Date()
         let estimated = await service.snapshot()
+        let after = Date()
 
         guard let position = estimated.position else {
             throw TestFailure(message: "Expected estimated position")
         }
 
         try expectTrue(position >= 10)
-        try expectTrue(estimated.capturedAt.timeIntervalSince1970 >= Date().timeIntervalSince1970 - 1)
+        try expectTrue(estimated.capturedAt >= before)
+        try expectTrue(estimated.capturedAt <= after)
     }
 
     private static let sampleSong = Song(
