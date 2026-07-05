@@ -31,7 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             permissionCoordinator: permissionCoordinator,
             nowPlayingProvider: nowPlayingProvider
         )
-        let popoverController = PopoverController(viewModel: viewModel)
+        let popoverController = PopoverController(viewModel: viewModel) {
+            NSApplication.shared.terminate(nil)
+        }
         self.viewModel = viewModel
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)
         lyricRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak viewModel] _ in

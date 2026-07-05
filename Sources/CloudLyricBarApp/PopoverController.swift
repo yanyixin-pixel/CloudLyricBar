@@ -6,11 +6,13 @@ import SwiftUI
 final class PopoverController {
     private let popover: NSPopover
 
-    init(viewModel: CloudLyricBarViewModel) {
+    init(viewModel: CloudLyricBarViewModel, quitAction: @escaping () -> Void) {
         popover = NSPopover()
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 360, height: 220)
-        popover.contentViewController = NSHostingController(rootView: PopoverView(viewModel: viewModel))
+        popover.contentSize = NSSize(width: 360, height: 248)
+        popover.contentViewController = NSHostingController(
+            rootView: PopoverView(viewModel: viewModel, quitAction: quitAction)
+        )
     }
 
     func toggle(relativeTo button: NSStatusBarButton) {

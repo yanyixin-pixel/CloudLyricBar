@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PopoverView: View {
     @ObservedObject var viewModel: CloudLyricBarViewModel
+    let quitAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -11,9 +12,10 @@ struct PopoverView: View {
             lyricContext
             statusMessage
             Spacer(minLength: 0)
+            quitButton
         }
         .padding(14)
-        .frame(width: 360, height: 220)
+        .frame(width: 360, height: 248)
     }
 
     private var currentSongHeader: some View {
@@ -40,7 +42,7 @@ struct PopoverView: View {
     }
 
     private var playbackControls: some View {
-        HStack {
+        HStack(spacing: 16) {
             Button(action: { Task { await viewModel.sendPlaybackCommand(.previous) } }) {
                 Image(systemName: "backward.fill")
             }
@@ -53,6 +55,18 @@ struct PopoverView: View {
         }
         .buttonStyle(.borderless)
         .frame(height: 26)
+    }
+
+    private var quitButton: some View {
+        HStack {
+            Spacer(minLength: 0)
+            Button(action: quitAction) {
+                Label("退出", systemImage: "power")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 22, maxHeight: 22)
     }
 
     private var lyricContext: some View {
