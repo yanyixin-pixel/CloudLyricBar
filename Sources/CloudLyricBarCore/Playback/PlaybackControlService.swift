@@ -9,6 +9,7 @@ public enum PlaybackCommand: Equatable, Sendable {
 
 public enum PlaybackControlError: Error, Equatable {
     case noAvailableStrategy
+    case commandFailed
 }
 
 public protocol PlaybackControlStrategy: Sendable {

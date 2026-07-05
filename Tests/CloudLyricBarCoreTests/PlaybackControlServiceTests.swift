@@ -11,6 +11,10 @@ let playbackControlServiceTests: [TestCase] = [
         run: PlaybackControlServiceTests.testThrowsWhenNoStrategyCanHandleCommand
     ),
     TestCase(
+        name: "PlaybackControlServiceTests.testPropagatesStrategyCommandFailure",
+        run: PlaybackControlServiceTests.testPropagatesStrategyCommandFailure
+    ),
+    TestCase(
         name: "PlaybackControlServiceTests.testNetEaseDeepLinkStrategyOpensSongURL",
         run: PlaybackControlServiceTests.testNetEaseDeepLinkStrategyOpensSongURL
     ),
@@ -54,6 +58,21 @@ enum PlaybackControlServiceTests {
             throw TestFailure(message: "Expected noAvailableStrategy error")
         } catch let error as PlaybackControlError {
             try expectEqual(error, .noAvailableStrategy)
+        }
+    }
+
+    static func testPropagatesStrategyCommandFailure() async throws {
+        let service = PlaybackControlService(
+            strategies: [
+                FailingPlaybackControlStrategy(error: PlaybackControlError.commandFailed)
+            ]
+        )
+
+        do {
+            try await service.send(.playPause)
+            throw TestFailure(message: "Expected commandFailed error")
+        } catch let error as PlaybackControlError {
+            try expectEqual(error, .commandFailed)
         }
     }
 
@@ -158,6 +177,18 @@ private actor DelayedRecordingPlaybackControlStrategy: PlaybackControlStrategy {
 
     func completedCommands() -> [PlaybackCommand] {
         commands
+    }
+}
+
+private struct FailingPlaybackControlStrategy: PlaybackControlStrategy {
+    let error: PlaybackControlError
+
+    func canSend(_ command: PlaybackCommand) async -> Bool {
+        true
+    }
+
+    func send(_ command: PlaybackCommand) async throws {
+        throw error
     }
 }
 
