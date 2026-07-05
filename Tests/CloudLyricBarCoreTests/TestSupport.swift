@@ -27,6 +27,7 @@ struct TestCase: Sendable {
 
 enum TestRegistry {
     static let tests: [TestCase] = playbackModelTests
+        + playbackControlServiceTests
         + lyricParserTests
         + lyricSyncEngineTests
         + marqueeTextEngineTests
