@@ -15,7 +15,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             AccessibilityPlaybackStrategy(permissionCoordinator: permissionCoordinator)
         ])
-        let viewModel = CloudLyricBarViewModel(apiClient: api, playbackControl: playback)
+        let viewModel = CloudLyricBarViewModel(
+            apiClient: api,
+            playbackControl: playback,
+            permissionCoordinator: permissionCoordinator
+        )
         let popoverController = PopoverController(viewModel: viewModel)
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)
         lyricRefreshTask = Task { @MainActor [weak viewModel] in

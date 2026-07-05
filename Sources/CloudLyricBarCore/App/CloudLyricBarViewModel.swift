@@ -13,13 +13,19 @@ public final class CloudLyricBarViewModel: ObservableObject {
 
     private let apiClient: any NetEaseAPIClient
     private let playbackControl: (any PlaybackControlling)?
+    private let permissionCoordinator: PermissionCoordinator?
     private var cachedLyrics: [String: [LyricLine]] = [:]
     private var latestNowPlaying: NowPlayingSnapshot?
     private var latestClientRunning = false
 
-    public init(apiClient: any NetEaseAPIClient, playbackControl: (any PlaybackControlling)? = nil) {
+    public init(
+        apiClient: any NetEaseAPIClient,
+        playbackControl: (any PlaybackControlling)? = nil,
+        permissionCoordinator: PermissionCoordinator? = nil
+    ) {
         self.apiClient = apiClient
         self.playbackControl = playbackControl
+        self.permissionCoordinator = permissionCoordinator
     }
 
     public func apply(nowPlaying: NowPlayingSnapshot, isClientRunning: Bool) async {
@@ -99,6 +105,11 @@ public final class CloudLyricBarViewModel: ObservableObject {
         } catch {
             message = "播放控制失败"
         }
+    }
+
+    public func requestPlaybackControlPermission() async {
+        await permissionCoordinator?.requestAccessibility()
+        message = "请在系统设置中允许辅助功能权限"
     }
 
     private func lyrics(for songID: String) async throws -> [LyricLine] {

@@ -33,6 +33,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
     TestCase(
         name: "CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage",
         run: CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testRequestPlaybackControlPermissionPromptsAccessibility",
+        run: CloudLyricBarViewModelTests.testRequestPlaybackControlPermissionPromptsAccessibility
     )
 ]
 
@@ -160,6 +164,20 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(playback.commands, [.next])
         try await expectEqual(model.message, "播放控制失败")
     }
+
+    static func testRequestPlaybackControlPermissionPromptsAccessibility() async throws {
+        let probe = RecordingAccessibilityPermissionProbe(isTrusted: false)
+        let coordinator = PermissionCoordinator(accessibilityProbe: probe)
+        let model = await CloudLyricBarViewModel(
+            apiClient: FakeNetEaseAPIClient(),
+            permissionCoordinator: coordinator
+        )
+
+        await model.requestPlaybackControlPermission()
+
+        try await expectEqual(probe.requestCount(), 1)
+        try await expectEqual(model.message, "请在系统设置中允许辅助功能权限")
+    }
 }
 
 private actor FakeNetEaseAPIClient: NetEaseAPIClient {
@@ -207,5 +225,26 @@ private actor RecordingPlaybackControl: PlaybackControlling {
         if let error {
             throw error
         }
+    }
+}
+
+private actor RecordingAccessibilityPermissionProbe: AccessibilityPermissionProbing {
+    private let trusted: Bool
+    private var requests = 0
+
+    init(isTrusted: Bool) {
+        trusted = isTrusted
+    }
+
+    func isTrusted() async -> Bool {
+        trusted
+    }
+
+    func requestTrustPrompt() async {
+        requests += 1
+    }
+
+    func requestCount() -> Int {
+        requests
     }
 }

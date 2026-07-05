@@ -84,7 +84,7 @@ public struct NetEaseDeepLinkStrategy: PlaybackControlStrategy {
             throw PlaybackControlError.noAvailableStrategy
         }
 
-        guard Self.isValidSongID(id), let url = URL(string: "orpheus://song/\(id)") else {
+        guard Self.isValidSongID(id), let url = URL(string: "orpheus://song/\(id)/?autoplay=1") else {
             throw PlaybackControlError.noAvailableStrategy
         }
 

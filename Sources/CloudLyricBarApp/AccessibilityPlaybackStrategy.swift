@@ -19,18 +19,18 @@ struct MacAccessibilityPermissionProbe: AccessibilityPermissionProbing {
 
 struct AccessibilityPlaybackStrategy: PlaybackControlStrategy {
     private let permissionCoordinator: PermissionCoordinator
-    private let postPlayPause: @Sendable () async throws -> Void
+    private let postMediaKey: @Sendable (PlaybackCommand) async throws -> Void
 
     init(
         permissionCoordinator: PermissionCoordinator,
-        postPlayPause: @escaping @Sendable () async throws -> Void = AccessibilityPlaybackStrategy.postPlayPauseMediaKey
+        postMediaKey: @escaping @Sendable (PlaybackCommand) async throws -> Void = AccessibilityPlaybackStrategy.postMediaKey
     ) {
         self.permissionCoordinator = permissionCoordinator
-        self.postPlayPause = postPlayPause
+        self.postMediaKey = postMediaKey
     }
 
     func canSend(_ command: PlaybackCommand) async -> Bool {
-        guard command == .playPause else {
+        guard Self.mediaKeyType(for: command) != nil else {
             return false
         }
 
@@ -42,17 +42,34 @@ struct AccessibilityPlaybackStrategy: PlaybackControlStrategy {
             throw PlaybackControlError.noAvailableStrategy
         }
 
-        try await postPlayPause()
+        try await postMediaKey(command)
     }
 
-    private static func postPlayPauseMediaKey() async throws {
+    private static func postMediaKey(_ command: PlaybackCommand) async throws {
+        guard let key = mediaKeyType(for: command) else {
+            throw PlaybackControlError.noAvailableStrategy
+        }
+
         try await MainActor.run {
-            try postMediaKey(NX_KEYTYPE_PLAY)
+            try postMediaKeyEvent(key)
+        }
+    }
+
+    private static func mediaKeyType(for command: PlaybackCommand) -> Int32? {
+        switch command {
+        case .playPause:
+            return NX_KEYTYPE_PLAY
+        case .previous:
+            return NX_KEYTYPE_PREVIOUS
+        case .next:
+            return NX_KEYTYPE_NEXT
+        case .openSong:
+            return nil
         }
     }
 
     @MainActor
-    private static func postMediaKey(_ key: Int32) throws {
+    private static func postMediaKeyEvent(_ key: Int32) throws {
         let keyCode = Int(key)
         let eventFlags = NSEvent.ModifierFlags(rawValue: 0xA00)
         let keyDownData = (keyCode << 16) | (0xA << 8)

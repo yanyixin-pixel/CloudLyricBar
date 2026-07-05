@@ -84,7 +84,7 @@ enum PlaybackControlServiceTests {
         try await expectFalse(strategy.canSend(.playPause))
         try await strategy.send(.openSong(id: "1901371647"))
 
-        try expectEqual(recorder.recordedURLs(), [URL(string: "orpheus://song/1901371647")!])
+        try expectEqual(recorder.recordedURLs(), [URL(string: "orpheus://song/1901371647/?autoplay=1")!])
 
         do {
             try await strategy.send(.playPause)
