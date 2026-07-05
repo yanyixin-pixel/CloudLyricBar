@@ -1,119 +1,97 @@
 import Foundation
 
-public enum PlaybackState: Sendable, Equatable {
+public enum PlaybackState: Equatable, Sendable {
     case playing
     case paused
     case stopped
 }
 
-public struct Song: Sendable, Equatable {
-    public var id: String?
-    public var title: String
-    public var artist: String?
-    public var album: String?
+public struct Song: Equatable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let artist: String
+    public let album: String?
+    public let artworkURL: URL?
 
-    public init(
-        id: String? = nil,
-        title: String,
-        artist: String? = nil,
-        album: String? = nil
-    ) {
+    public init(id: String, title: String, artist: String, album: String? = nil, artworkURL: URL? = nil) {
         self.id = id
         self.title = title
         self.artist = artist
         self.album = album
+        self.artworkURL = artworkURL
     }
 }
 
-public struct Playlist: Sendable, Equatable {
-    public var id: String?
-    public var name: String
-    public var songs: [Song]
+public struct Playlist: Equatable, Identifiable, Sendable {
+    public let id: String
+    public let name: String
+    public let trackCount: Int
 
-    public init(
-        id: String? = nil,
-        name: String,
-        songs: [Song] = []
-    ) {
+    public init(id: String, name: String, trackCount: Int) {
         self.id = id
         self.name = name
-        self.songs = songs
+        self.trackCount = trackCount
     }
 }
 
-public struct LyricLine: Sendable, Equatable {
-    public var startTime: Double
-    public var text: String
+public struct LyricLine: Equatable, Identifiable, Sendable {
+    public var id: TimeInterval { startTime }
+    public let startTime: TimeInterval
+    public let text: String
 
-    public init(startTime: Double, text: String) {
+    public init(startTime: TimeInterval, text: String) {
         self.startTime = startTime
         self.text = text
     }
 }
 
-public struct LyricContext: Sendable, Equatable {
-    public var lines: [LyricLine]
-    public var currentLine: LyricLine?
+public struct LyricContext: Equatable, Sendable {
+    public let previous: LyricLine?
+    public let current: LyricLine?
+    public let next: LyricLine?
 
-    public init(lines: [LyricLine] = [], currentLine: LyricLine? = nil) {
-        self.lines = lines
-        self.currentLine = currentLine
+    public init(previous: LyricLine?, current: LyricLine?, next: LyricLine?) {
+        self.previous = previous
+        self.current = current
+        self.next = next
     }
 }
 
-public struct NowPlayingSnapshot: Sendable, Equatable {
-    public var isClientRunning: Bool
-    public var playback: PlaybackState
-    public var song: Song?
-    public var playlist: Playlist?
-    public var lyricContext: LyricContext?
-    public var elapsedTime: Double?
+public struct NowPlayingSnapshot: Equatable, Sendable {
+    public let song: Song?
+    public let playback: PlaybackState
+    public let position: TimeInterval?
+    public let capturedAt: Date
 
-    public init(
-        isClientRunning: Bool,
-        playback: PlaybackState,
-        song: Song? = nil,
-        playlist: Playlist? = nil,
-        lyricContext: LyricContext? = nil,
-        elapsedTime: Double? = nil
-    ) {
-        self.isClientRunning = isClientRunning
-        self.playback = playback
+    public init(song: Song?, playback: PlaybackState, position: TimeInterval?, capturedAt: Date = Date()) {
         self.song = song
-        self.playlist = playlist
-        self.lyricContext = lyricContext
-        self.elapsedTime = elapsedTime
+        self.playback = playback
+        self.position = position
+        self.capturedAt = capturedAt
     }
 }
 
-public struct MenuBarDisplayState: Sendable, Equatable {
-    public var isClientRunning: Bool
-    public var playback: PlaybackState
-    public var lyricText: String?
-    public var fallbackTitle: String?
+public struct MenuBarDisplayState: Equatable, Sendable {
+    public let playback: PlaybackState
+    public let lyricText: String?
+    public let fallbackTitle: String?
+    public let isClientRunning: Bool
 
-    public init(
-        isClientRunning: Bool,
-        playback: PlaybackState,
-        lyricText: String? = nil,
-        fallbackTitle: String? = nil
-    ) {
-        self.isClientRunning = isClientRunning
+    public init(playback: PlaybackState, lyricText: String?, fallbackTitle: String?, isClientRunning: Bool) {
         self.playback = playback
         self.lyricText = lyricText
         self.fallbackTitle = fallbackTitle
+        self.isClientRunning = isClientRunning
     }
 
     public var title: String {
-        guard isClientRunning else {
-            return "♪"
+        guard isClientRunning else { return "♪" }
+
+        if playback == .playing, let lyricText, !lyricText.isEmpty {
+            return "♪ \(lyricText)"
         }
 
-        if playback == .playing, let lyric = nonEmpty(lyricText) {
-            return "♪ \(lyric)"
-        }
-
-        if let fallbackTitle = nonEmpty(fallbackTitle) {
+        if let fallbackTitle, !fallbackTitle.isEmpty {
             return "♪ \(fallbackTitle)"
         }
 
@@ -121,15 +99,6 @@ public struct MenuBarDisplayState: Sendable, Equatable {
     }
 
     public var shouldAnimate: Bool {
-        playback == .playing && nonEmpty(lyricText) != nil
-    }
-
-    private func nonEmpty(_ text: String?) -> String? {
-        guard let text else {
-            return nil
-        }
-
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        isClientRunning && playback == .playing && lyricText != nil
     }
 }

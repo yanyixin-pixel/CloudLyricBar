@@ -11,6 +11,10 @@ let package = Package(
         .library(
             name: "CloudLyricBarCore",
             targets: ["CloudLyricBarCore"]
+        ),
+        .executable(
+            name: "CloudLyricBarApp",
+            targets: ["CloudLyricBarApp"]
         )
     ],
     targets: [
