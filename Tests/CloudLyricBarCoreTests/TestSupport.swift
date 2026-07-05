@@ -18,6 +18,7 @@ enum TestRegistry {
         + lyricParserTests
         + lyricSyncEngineTests
         + marqueeTextEngineTests
+        + netEaseDTOTests
 }
 
 func expectEqual<T: Equatable>(_ actual: T, _ expected: T, _ message: String? = nil) throws {

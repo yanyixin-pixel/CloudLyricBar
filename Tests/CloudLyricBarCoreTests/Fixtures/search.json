@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "result": {
+    "songs": [
+      {
+        "id": 1901371647,
+        "name": "一路向北",
+        "artists": [{ "name": "周杰伦" }],
+        "album": {
+          "name": "十一月的萧邦",
+          "picUrl": "https://p1.music.126.net/artwork.jpg"
+        }
+      }
+    ]
+  }
+}

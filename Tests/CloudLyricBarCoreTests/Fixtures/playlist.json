@@ -1,0 +1,7 @@
+{
+  "code": 200,
+  "playlist": [
+    { "id": 123, "name": "我喜欢的音乐", "trackCount": 88 },
+    { "id": 456, "name": "夜晚播放", "trackCount": 24 }
+  ]
+}
