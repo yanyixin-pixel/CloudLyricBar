@@ -13,8 +13,19 @@ public enum QRLoginPollResult: Equatable, Sendable {
     case confirmed(NetEaseSession)
 }
 
+public struct QRCodeLogin: Equatable, Sendable {
+    public let key: String
+    public let url: URL
+
+    public init(key: String, url: URL) {
+        self.key = key
+        self.url = url
+    }
+}
+
 public protocol QRLoginProviding: Sendable {
-    func poll() async throws -> QRLoginPollResult
+    func createQRCode() async throws -> QRCodeLogin
+    func poll(key: String) async throws -> QRLoginPollResult
 }
 
 public actor NetEaseAuthService {
@@ -41,8 +52,12 @@ public actor NetEaseAuthService {
         return state
     }
 
-    public func pollQRCode() async throws -> AuthState {
-        switch try await qrLoginProvider.poll() {
+    public func createQRCode() async throws -> QRCodeLogin {
+        try await qrLoginProvider.createQRCode()
+    }
+
+    public func pollQRCode(key: String) async throws -> AuthState {
+        switch try await qrLoginProvider.poll(key: key) {
         case .waiting:
             state = .waitingForScan
         case .expired:

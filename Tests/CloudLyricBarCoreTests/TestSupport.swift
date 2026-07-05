@@ -32,6 +32,7 @@ enum TestRegistry {
         + marqueeTextEngineTests
         + netEaseDTOTests
         + netEaseAPIClientTests
+        + netEaseQRLoginProviderTests
         + netEaseAuthServiceTests
 }
 
