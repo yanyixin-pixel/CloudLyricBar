@@ -37,6 +37,7 @@ enum TestRegistry {
         + netEaseQRLoginProviderTests
         + netEaseAuthServiceTests
         + permissionCoordinatorTests
+        + cloudLyricBarViewModelTests
 }
 
 func expectEqual<T: Equatable>(_ actual: T, _ expected: T, _ message: String? = nil) throws {
