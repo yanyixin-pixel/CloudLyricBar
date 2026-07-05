@@ -15,6 +15,8 @@ struct TestCase: Sendable {
 
 enum TestRegistry {
     static let tests: [TestCase] = playbackModelTests
+        + lyricParserTests
+        + lyricSyncEngineTests
 }
 
 func expectEqual<T: Equatable>(_ actual: T, _ expected: T, _ message: String? = nil) throws {
