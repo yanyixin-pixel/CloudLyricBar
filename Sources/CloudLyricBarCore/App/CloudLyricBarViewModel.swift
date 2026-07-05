@@ -14,6 +14,7 @@ public final class CloudLyricBarViewModel: ObservableObject {
     private let apiClient: any NetEaseAPIClient
     private let playbackControl: (any PlaybackControlling)?
     private let permissionCoordinator: PermissionCoordinator?
+    private let audioPlayer: (any SongAudioPlaying)?
     private var cachedLyrics: [String: [LyricLine]] = [:]
     private var latestNowPlaying: NowPlayingSnapshot?
     private var latestClientRunning = false
@@ -21,11 +22,13 @@ public final class CloudLyricBarViewModel: ObservableObject {
     public init(
         apiClient: any NetEaseAPIClient,
         playbackControl: (any PlaybackControlling)? = nil,
-        permissionCoordinator: PermissionCoordinator? = nil
+        permissionCoordinator: PermissionCoordinator? = nil,
+        audioPlayer: (any SongAudioPlaying)? = nil
     ) {
         self.apiClient = apiClient
         self.playbackControl = playbackControl
         self.permissionCoordinator = permissionCoordinator
+        self.audioPlayer = audioPlayer
     }
 
     public func apply(nowPlaying: NowPlayingSnapshot, isClientRunning: Bool) async {
@@ -80,11 +83,17 @@ public final class CloudLyricBarViewModel: ObservableObject {
 
     public func play(_ song: Song) async {
         do {
-            try await playbackControl?.send(.openSong(id: song.id))
-            await apply(
-                nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 0),
-                isClientRunning: true
-            )
+            if let audioPlayer {
+                let streamURL = try await apiClient.fetchSongStreamURL(songID: song.id)
+                try await audioPlayer.play(song: song, streamURL: streamURL)
+                await apply(nowPlaying: await audioPlayer.snapshot(), isClientRunning: true)
+            } else {
+                try await playbackControl?.send(.openSong(id: song.id))
+                await apply(
+                    nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 0),
+                    isClientRunning: true
+                )
+            }
             message = nil
         } catch {
             message = "无法让网易云播放这首歌"
@@ -92,6 +101,11 @@ public final class CloudLyricBarViewModel: ObservableObject {
     }
 
     public func refreshEstimatedPlayback(at date: Date = Date()) async {
+        if let audioPlayer {
+            await apply(nowPlaying: await audioPlayer.snapshot(), isClientRunning: true)
+            return
+        }
+
         guard let latestNowPlaying else { return }
 
         let estimated = TimerPositionEstimator.estimate(from: latestNowPlaying, at: date)
@@ -100,7 +114,12 @@ public final class CloudLyricBarViewModel: ObservableObject {
 
     public func sendPlaybackCommand(_ command: PlaybackCommand) async {
         do {
-            try await playbackControl?.send(command)
+            if let audioPlayer {
+                try await audioPlayer.send(command)
+                await apply(nowPlaying: await audioPlayer.snapshot(), isClientRunning: true)
+            } else {
+                try await playbackControl?.send(command)
+            }
             message = nil
         } catch {
             message = "播放控制失败"

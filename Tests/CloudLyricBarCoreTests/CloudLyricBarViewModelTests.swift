@@ -27,6 +27,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testSelectingSongUpdatesCurrentSongAndLyrics
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testSelectingSongStartsAudioPlayerAndSyncsLyricsFromPlayerPosition",
+        run: CloudLyricBarViewModelTests.testSelectingSongStartsAudioPlayerAndSyncsLyricsFromPlayerPosition
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics",
         run: CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics
     ),
@@ -136,6 +140,30 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(model.lyricContext.current?.text, "开头一句")
     }
 
+    static func testSelectingSongStartsAudioPlayerAndSyncsLyricsFromPlayerPosition() async throws {
+        let song = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+        let streamURL = URL(string: "https://music.example/song.mp3")!
+        let player = RecordingSongAudioPlayer(
+            snapshot: NowPlayingSnapshot(song: song, playback: .playing, position: 9)
+        )
+        let api = FakeNetEaseAPIClient(
+            lines: [
+                LyricLine(startTime: 0, text: "开头一句"),
+                LyricLine(startTime: 8, text: "真实进度这一句")
+            ],
+            streamURL: streamURL
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api, audioPlayer: player)
+
+        await model.play(song)
+        await model.refreshEstimatedPlayback(at: Date(timeIntervalSince1970: 100))
+
+        try await expectEqual(api.fetchedStreamURLSongIDs(), ["1901371647"])
+        try await expectEqual(player.playRequests(), [SongAudioPlayRequest(song: song, streamURL: streamURL)])
+        try await expectEqual(model.lyricContext.current?.text, "真实进度这一句")
+        try await expectEqual(model.menuBarTitle, "♪ 真实进度这一句")
+    }
+
     static func testRefreshEstimatedPlaybackAdvancesLyrics() async throws {
         let api = FakeNetEaseAPIClient(lines: [
             LyricLine(startTime: 0, text: "开头一句"),
@@ -184,17 +212,21 @@ private actor FakeNetEaseAPIClient: NetEaseAPIClient {
     private let playlistsValue: [Playlist]
     private let searchResultsValue: [Song]
     private let linesValue: [LyricLine]
+    private let streamURLValue: URL
     private(set) var searchCallCount = 0
     private(set) var fetchLyricsCallCount = 0
+    private var streamURLSongIDs: [String] = []
 
     init(
         playlists: [Playlist] = [],
         searchResults: [Song] = [],
-        lines: [LyricLine] = []
+        lines: [LyricLine] = [],
+        streamURL: URL = URL(string: "https://music.example/default.mp3")!
     ) {
         self.playlistsValue = playlists
         self.searchResultsValue = searchResults
         self.linesValue = lines
+        self.streamURLValue = streamURL
     }
 
     func userPlaylists(userID: String) async throws -> [Playlist] {
@@ -209,6 +241,15 @@ private actor FakeNetEaseAPIClient: NetEaseAPIClient {
     func fetchLyrics(songID: String) async throws -> [LyricLine] {
         fetchLyricsCallCount += 1
         return linesValue
+    }
+
+    func fetchSongStreamURL(songID: String) async throws -> URL {
+        streamURLSongIDs.append(songID)
+        return streamURLValue
+    }
+
+    func fetchedStreamURLSongIDs() -> [String] {
+        streamURLSongIDs
     }
 }
 
@@ -225,6 +266,34 @@ private actor RecordingPlaybackControl: PlaybackControlling {
         if let error {
             throw error
         }
+    }
+}
+
+private struct SongAudioPlayRequest: Equatable {
+    let song: Song
+    let streamURL: URL
+}
+
+private actor RecordingSongAudioPlayer: SongAudioPlaying {
+    private var requests: [SongAudioPlayRequest] = []
+    private var latestSnapshot: NowPlayingSnapshot
+
+    init(snapshot: NowPlayingSnapshot) {
+        latestSnapshot = snapshot
+    }
+
+    func play(song: Song, streamURL: URL) async throws {
+        requests.append(SongAudioPlayRequest(song: song, streamURL: streamURL))
+    }
+
+    func send(_ command: PlaybackCommand) async throws {}
+
+    func snapshot() async -> NowPlayingSnapshot {
+        latestSnapshot
+    }
+
+    func playRequests() -> [SongAudioPlayRequest] {
+        requests
     }
 }
 

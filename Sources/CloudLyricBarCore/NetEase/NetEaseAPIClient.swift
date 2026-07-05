@@ -10,6 +10,7 @@ public protocol HTTPTransport: Sendable {
 public enum NetEaseAPIError: Error, Equatable {
     case invalidURL
     case badStatus(Int)
+    case playableURLMissing
 }
 
 public struct URLSessionHTTPTransport: HTTPTransport {
@@ -35,6 +36,7 @@ public protocol NetEaseAPIClient: Sendable {
     func userPlaylists(userID: String) async throws -> [Playlist]
     func searchSongs(keyword: String) async throws -> [Song]
     func fetchLyrics(songID: String) async throws -> [LyricLine]
+    func fetchSongStreamURL(songID: String) async throws -> URL
 }
 
 public struct URLSessionNetEaseAPIClient: NetEaseAPIClient {
@@ -78,6 +80,21 @@ public struct URLSessionNetEaseAPIClient: NetEaseAPIClient {
         let data = try await transport.data(for: request)
         let response = try decoder.decode(NetEaseLyricResponse.self, from: data)
         return response.lines
+    }
+
+    public func fetchSongStreamURL(songID: String) async throws -> URL {
+        let request = try request(path: "/song/url/v1", queryItems: [
+            URLQueryItem(name: "id", value: songID),
+            URLQueryItem(name: "level", value: "standard")
+        ])
+        let data = try await transport.data(for: request)
+        let response = try decoder.decode(NetEaseSongURLResponse.self, from: data)
+
+        guard let url = response.playableURL else {
+            throw NetEaseAPIError.playableURLMissing
+        }
+
+        return url
     }
 
     private func request(path: String, queryItems: [URLQueryItem]) throws -> URLRequest {

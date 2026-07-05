@@ -75,3 +75,17 @@ public struct NetEaseLyricResponse: Decodable, Sendable {
         public let lyric: String
     }
 }
+
+public struct NetEaseSongURLResponse: Decodable, Sendable {
+    public let code: Int
+    public let data: [SongURL]
+
+    public var playableURL: URL? {
+        data.compactMap(\.url).first
+    }
+
+    public struct SongURL: Decodable, Sendable {
+        public let id: Int
+        public let url: URL?
+    }
+}

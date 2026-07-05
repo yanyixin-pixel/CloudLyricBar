@@ -13,6 +13,10 @@ let netEaseDTOTests: [TestCase] = [
     TestCase(
         name: "NetEaseDTOTests.testDecodesLyricResponseAndParsesLines",
         run: NetEaseDTOTests.testDecodesLyricResponseAndParsesLines
+    ),
+    TestCase(
+        name: "NetEaseDTOTests.testDecodesSongURLResponseAndReturnsFirstPlayableURL",
+        run: NetEaseDTOTests.testDecodesSongURLResponseAndReturnsFirstPlayableURL
     )
 ]
 
@@ -58,6 +62,13 @@ enum NetEaseDTOTests {
                 LyricLine(startTime: 3.5, text: "第二句歌词")
             ]
         )
+    }
+
+    static func testDecodesSongURLResponseAndReturnsFirstPlayableURL() throws {
+        let response = try decodeFixture("song-url", as: NetEaseSongURLResponse.self)
+
+        try expectEqual(response.code, 200)
+        try expectEqual(response.playableURL, URL(string: "https://music.example/song.mp3"))
     }
 
     private static func decodeFixture<T: Decodable>(_ name: String, as type: T.Type) throws -> T {

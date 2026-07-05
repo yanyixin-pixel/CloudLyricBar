@@ -15,6 +15,10 @@ let netEaseAPIClientTests: [TestCase] = [
         run: NetEaseAPIClientTests.testFetchLyricsDecodesLines
     ),
     TestCase(
+        name: "NetEaseAPIClientTests.testFetchSongStreamURLBuildsExpectedRequestAndDecodesURL",
+        run: NetEaseAPIClientTests.testFetchSongStreamURLBuildsExpectedRequestAndDecodesURL
+    ),
+    TestCase(
         name: "NetEaseAPIClientTests.testUserPlaylistsBuildsExpectedRequestAndDecodesPlaylists",
         run: NetEaseAPIClientTests.testUserPlaylistsBuildsExpectedRequestAndDecodesPlaylists
     )
@@ -65,6 +69,22 @@ enum NetEaseAPIClientTests {
         try expectEqual(request.url?.path, "/lyric")
         try expectQueryItem(request.url, name: "id", value: "1901371647")
         try expectEqual(lines.map(\.text), ["第一句歌词", "第二句歌词"])
+    }
+
+    static func testFetchSongStreamURLBuildsExpectedRequestAndDecodesURL() async throws {
+        let transport = FakeHTTPTransport(data: try fixtureData(named: "song-url"))
+        let client = URLSessionNetEaseAPIClient(
+            baseURL: try requireURL("https://music.example"),
+            transport: transport
+        )
+
+        let url = try await client.fetchSongStreamURL(songID: "1901371647")
+        let request = try await transport.requireRequest()
+
+        try expectEqual(request.url?.path, "/song/url/v1")
+        try expectQueryItem(request.url, name: "id", value: "1901371647")
+        try expectQueryItem(request.url, name: "level", value: "standard")
+        try expectEqual(url, URL(string: "https://music.example/song.mp3"))
     }
 
     static func testUserPlaylistsBuildsExpectedRequestAndDecodesPlaylists() async throws {

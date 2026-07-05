@@ -1,0 +1,10 @@
+{
+  "data": [
+    {
+      "id": 1901371647,
+      "url": "https://music.example/song.mp3",
+      "br": 320000
+    }
+  ],
+  "code": 200
+}

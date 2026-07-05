@@ -12,7 +12,6 @@ struct PopoverView: View {
             lyricContext
             searchField
             libraryList
-            permissionButton
             statusMessage
         }
         .padding(14)
@@ -106,15 +105,6 @@ struct PopoverView: View {
                 }
             }
         }
-    }
-
-    @ViewBuilder
-    private var permissionButton: some View {
-        Button(action: { Task { await viewModel.requestPlaybackControlPermission() } }) {
-            Label("启用播放控制权限", systemImage: "accessibility")
-        }
-        .buttonStyle(.borderless)
-        .font(.caption)
     }
 
     @ViewBuilder
