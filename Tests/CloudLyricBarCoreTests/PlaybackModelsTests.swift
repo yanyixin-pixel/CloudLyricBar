@@ -16,6 +16,10 @@ let playbackModelTests: [TestCase] = [
     TestCase(
         name: "PlaybackModelsTests.testMenuBarTitleShowsIdleWhenClientIsClosed",
         run: PlaybackModelsTests.testMenuBarTitleShowsIdleWhenClientIsClosed
+    ),
+    TestCase(
+        name: "PlaybackModelsTests.testMenuBarTitleFrameScrollsLongPlayingLyric",
+        run: PlaybackModelsTests.testMenuBarTitleFrameScrollsLongPlayingLyric
     )
 ]
 
@@ -66,5 +70,20 @@ enum PlaybackModelsTests {
 
         try expectEqual(state.title, "♪")
         try expectFalse(state.shouldAnimate)
+    }
+
+    static func testMenuBarTitleFrameScrollsLongPlayingLyric() throws {
+        let state = MenuBarDisplayState(
+            playback: .playing,
+            lyricText: "这是一句非常非常长的歌词需要在系统栏里滚动显示",
+            fallbackTitle: "晴天",
+            isClientRunning: true
+        )
+
+        let frame = state.marqueeFrame(visibleCharacterCount: 10, tick: 3)
+
+        try expectEqual(frame.text.count, 10)
+        try expectTrue(frame.isScrolling)
+        try expectEqual(frame.text, "是一句非常非常长的歌")
     }
 }

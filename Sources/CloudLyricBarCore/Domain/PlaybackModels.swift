@@ -102,6 +102,14 @@ public struct MenuBarDisplayState: Equatable, Sendable {
         isClientRunning && playback == .playing && nonEmpty(lyricText) != nil
     }
 
+    public func marqueeFrame(visibleCharacterCount: Int, tick: Int) -> MarqueeFrame {
+        MarqueeTextEngine.frame(
+            text: title,
+            visibleCharacterCount: visibleCharacterCount,
+            tick: shouldAnimate ? tick : 0
+        )
+    }
+
     private func nonEmpty(_ text: String?) -> String? {
         guard let text else {
             return nil
