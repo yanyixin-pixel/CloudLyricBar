@@ -87,11 +87,11 @@ public struct MenuBarDisplayState: Equatable, Sendable {
     public var title: String {
         guard isClientRunning else { return "♪" }
 
-        if playback == .playing, let lyricText, !lyricText.isEmpty {
+        if playback == .playing, let lyricText = nonEmpty(lyricText) {
             return "♪ \(lyricText)"
         }
 
-        if let fallbackTitle, !fallbackTitle.isEmpty {
+        if let fallbackTitle = nonEmpty(fallbackTitle) {
             return "♪ \(fallbackTitle)"
         }
 
@@ -99,6 +99,15 @@ public struct MenuBarDisplayState: Equatable, Sendable {
     }
 
     public var shouldAnimate: Bool {
-        isClientRunning && playback == .playing && lyricText != nil
+        isClientRunning && playback == .playing && nonEmpty(lyricText) != nil
+    }
+
+    private func nonEmpty(_ text: String?) -> String? {
+        guard let text else {
+            return nil
+        }
+
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

@@ -39,7 +39,16 @@ func expectFalse(_ condition: Bool, _ message: String? = nil) throws {
 @main
 struct TestRunner {
     static func main() {
-        let filter = parsedFilter(from: CommandLine.arguments)
+        let filter: String?
+
+        do {
+            filter = try parsedFilter(from: CommandLine.arguments)
+        } catch {
+            print("Invalid usage: \(error)")
+            print("Usage: CloudLyricBarCoreTests [--filter <substring>]")
+            exit(1)
+        }
+
         let tests = TestRegistry.tests.filter { test in
             guard let filter else {
                 return true
@@ -72,14 +81,14 @@ struct TestRunner {
         }
     }
 
-    private static func parsedFilter(from arguments: [String]) -> String? {
+    private static func parsedFilter(from arguments: [String]) throws -> String? {
         guard let filterIndex = arguments.firstIndex(of: "--filter") else {
             return nil
         }
 
         let valueIndex = arguments.index(after: filterIndex)
         guard valueIndex < arguments.endIndex else {
-            return nil
+            throw TestFailure(message: "--filter requires a value")
         }
 
         return arguments[valueIndex]

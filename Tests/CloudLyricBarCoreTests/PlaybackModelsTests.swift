@@ -10,6 +10,10 @@ let playbackModelTests: [TestCase] = [
         run: PlaybackModelsTests.testMenuBarTitleFallsBackToSongTitleWhenLyricMissing
     ),
     TestCase(
+        name: "PlaybackModelsTests.testMenuBarTitleFallsBackWhenLyricIsEmpty",
+        run: PlaybackModelsTests.testMenuBarTitleFallsBackWhenLyricIsEmpty
+    ),
+    TestCase(
         name: "PlaybackModelsTests.testMenuBarTitleShowsIdleWhenClientIsClosed",
         run: PlaybackModelsTests.testMenuBarTitleShowsIdleWhenClientIsClosed
     )
@@ -32,6 +36,18 @@ enum PlaybackModelsTests {
         let state = MenuBarDisplayState(
             playback: .playing,
             lyricText: nil,
+            fallbackTitle: "晴天",
+            isClientRunning: true
+        )
+
+        try expectEqual(state.title, "♪ 晴天")
+        try expectFalse(state.shouldAnimate)
+    }
+
+    static func testMenuBarTitleFallsBackWhenLyricIsEmpty() throws {
+        let state = MenuBarDisplayState(
+            playback: .playing,
+            lyricText: "   ",
             fallbackTitle: "晴天",
             isClientRunning: true
         )
