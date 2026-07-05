@@ -3,19 +3,16 @@ import SwiftUI
 
 struct PopoverView: View {
     @ObservedObject var viewModel: CloudLyricBarViewModel
-    @State private var searchText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             currentSongHeader
             playbackControls
             lyricContext
-            searchField
-            libraryList
             statusMessage
         }
         .padding(14)
-        .frame(width: 360, height: 520)
+        .frame(width: 360, height: 220)
     }
 
     private var currentSongHeader: some View {
@@ -65,45 +62,6 @@ struct PopoverView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-        }
-    }
-
-    private var searchField: some View {
-        TextField("搜索歌曲、歌手或专辑", text: $searchText)
-            .textFieldStyle(.roundedBorder)
-            .onSubmit {
-                Task { await viewModel.search(keyword: searchText) }
-            }
-    }
-
-    private var libraryList: some View {
-        List {
-            Section("搜索结果") {
-                ForEach(viewModel.searchResults) { song in
-                    Button(action: { Task { await viewModel.play(song) } }) {
-                        VStack(alignment: .leading) {
-                            Text(song.title).lineLimit(1)
-                            Text(song.artist)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Section("我的歌单") {
-                ForEach(viewModel.playlists) { playlist in
-                    HStack {
-                        Text(playlist.name).lineLimit(1)
-                        Spacer()
-                        Text("\(playlist.trackCount)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
         }
     }
 

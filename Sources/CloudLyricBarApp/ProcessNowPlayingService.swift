@@ -92,14 +92,15 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
         let artist = object["artist"] as? String ?? ""
         let position = object["position"] as? TimeInterval
         let rate = object["playbackRate"] as? Double ?? 0
-        let playback: PlaybackState = rate > 0.01 ? .playing : .paused
-        let song = Song(
-            id: "external:mediaremote:\(title):\(artist)",
-            title: title,
-            artist: artist
-        )
+        let timestamp = (object["timestamp"] as? TimeInterval).map(Date.init(timeIntervalSince1970:))
 
-        return NowPlayingSnapshot(song: song, playback: playback, position: position)
+        return ExternalNowPlayingPayload(
+            title: title,
+            artist: artist,
+            elapsedTime: position,
+            playbackRate: rate,
+            timestamp: timestamp
+        ).snapshot()
     }
 
     private var probeScript: String {
@@ -118,6 +119,9 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
                 payload["artist"] = dictionary["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
                 payload["position"] = dictionary["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? Double ?? 0
                 payload["playbackRate"] = dictionary["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
+                if let timestamp = dictionary["kMRMediaRemoteNowPlayingInfoTimestamp"] as? Date {
+                    payload["timestamp"] = timestamp.timeIntervalSince1970
+                }
             } else {
                 payload["title"] = ""
             }
@@ -147,7 +151,7 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
             }
             RunLoop.main.run(until: Date().addingTimeInterval(0.1))
             _ = semaphore.wait(timeout: .now() + 2)
-            Thread.sleep(forTimeInterval: 1)
+            Thread.sleep(forTimeInterval: 0.25)
         }
         """
     }

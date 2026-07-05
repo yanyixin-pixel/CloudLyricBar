@@ -9,7 +9,7 @@ final class PopoverController {
     init(viewModel: CloudLyricBarViewModel) {
         popover = NSPopover()
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 360, height: 520)
+        popover.contentSize = NSSize(width: 360, height: 220)
         popover.contentViewController = NSHostingController(rootView: PopoverView(viewModel: viewModel))
     }
 

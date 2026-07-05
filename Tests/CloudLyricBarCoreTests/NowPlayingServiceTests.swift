@@ -25,6 +25,10 @@ let nowPlayingServiceTests: [TestCase] = [
     TestCase(
         name: "NowPlayingServiceTests.testSnapshotServiceReturnsEstimatedLatestSnapshot",
         run: NowPlayingServiceTests.testSnapshotServiceReturnsEstimatedLatestSnapshot
+    ),
+    TestCase(
+        name: "NowPlayingServiceTests.testExternalNowPlayingPayloadAdvancesElapsedTimeFromTimestamp",
+        run: NowPlayingServiceTests.testExternalNowPlayingPayloadAdvancesElapsedTimeFromTimestamp
     )
 ]
 
@@ -136,6 +140,22 @@ enum NowPlayingServiceTests {
         try expectTrue(position >= 10)
         try expectTrue(estimated.capturedAt >= before)
         try expectTrue(estimated.capturedAt <= after)
+    }
+
+    static func testExternalNowPlayingPayloadAdvancesElapsedTimeFromTimestamp() throws {
+        let snapshot = ExternalNowPlayingPayload(
+            title: "一路向北",
+            artist: "周杰伦",
+            elapsedTime: 20,
+            playbackRate: 1,
+            timestamp: Date(timeIntervalSince1970: 100)
+        ).snapshot(at: Date(timeIntervalSince1970: 103.25))
+
+        try expectEqual(snapshot.song?.id, "external:mediaremote:一路向北:周杰伦")
+        try expectEqual(snapshot.song?.title, "一路向北")
+        try expectEqual(snapshot.playback, .playing)
+        try expectEqual(snapshot.position, 23.25)
+        try expectEqual(snapshot.capturedAt, Date(timeIntervalSince1970: 103.25))
     }
 
     private static let sampleSong = Song(

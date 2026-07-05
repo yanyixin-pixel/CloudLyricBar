@@ -26,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let popoverController = PopoverController(viewModel: viewModel)
         self.viewModel = viewModel
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)
-        lyricRefreshTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak viewModel] _ in
+        lyricRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak viewModel] _ in
             Task { @MainActor in
                 await viewModel?.refreshEstimatedPlayback()
             }
