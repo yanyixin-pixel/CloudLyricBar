@@ -145,16 +145,16 @@ public enum MarqueeTextEngine {
         }
 
         let leadingPause = max(0, leadingPauseTicks)
-        let spacer = Array("      ")
-        let scrollingCharacters = characters + spacer
-        let cycleLength = max(1, leadingPause + scrollingCharacters.count)
-        let phase = normalizedOffset(tick, count: cycleLength)
-        let startIndex = phase < leadingPause ? 0 : phase - leadingPause
+        let maxStartIndex = lastReadableStartIndex(
+            characters: characters,
+            maxDisplayWidth: maxDisplayWidth,
+            characterWidth: characterWidth
+        )
+        let startIndex = min(maxStartIndex, max(0, tick - leadingPause))
         var width = 0.0
         var visibleCharacters: [Character] = []
 
-        for offset in 0..<scrollingCharacters.count {
-            let character = scrollingCharacters[(startIndex + offset) % scrollingCharacters.count]
+        for character in characters[startIndex...] {
             let nextWidth = width + max(0, characterWidth(character))
             if !visibleCharacters.isEmpty, nextWidth > maxDisplayWidth {
                 break
@@ -165,6 +165,27 @@ public enum MarqueeTextEngine {
         }
 
         return MarqueeFrame(text: String(visibleCharacters), isScrolling: true)
+    }
+
+    private static func lastReadableStartIndex(
+        characters: [Character],
+        maxDisplayWidth: Double,
+        characterWidth: (Character) -> Double
+    ) -> Int {
+        var width = 0.0
+        var startIndex = max(0, characters.count - 1)
+
+        for index in characters.indices.reversed() {
+            let nextWidth = width + max(0, characterWidth(characters[index]))
+            if width > 0, nextWidth > maxDisplayWidth {
+                break
+            }
+
+            width = nextWidth
+            startIndex = index
+        }
+
+        return startIndex
     }
 
     private static func normalizedOffset(_ tick: Int, count: Int) -> Int {

@@ -30,8 +30,8 @@ let marqueeTextEngineTests: [TestCase] = [
         run: MarqueeTextEngineTests.testPixelFrameKeepsWideCharactersInsideDisplayWidth
     ),
     TestCase(
-        name: "MarqueeTextEngineTests.testPixelFrameWrapsLongTextWithSpacer",
-        run: MarqueeTextEngineTests.testPixelFrameWrapsLongTextWithSpacer
+        name: "MarqueeTextEngineTests.testPixelFrameStopsAtReadableTail",
+        run: MarqueeTextEngineTests.testPixelFrameStopsAtReadableTail
     )
 ]
 
@@ -139,26 +139,26 @@ enum MarqueeTextEngineTests {
         try expectEqual(tailFrame, MarqueeFrame(text: "界", isScrolling: true))
     }
 
-    static func testPixelFrameWrapsLongTextWithSpacer() throws {
+    static func testPixelFrameStopsAtReadableTail() throws {
         let text = "abcdef"
-        let frame = MarqueeTextEngine.pixelFrame(
+        let tail = MarqueeTextEngine.pixelFrame(
             text: text,
             maxDisplayWidth: 4,
-            tick: 8,
+            tick: 20,
             leadingPauseTicks: 0,
             trailingPauseTicks: 0,
             characterWidth: { _ in 1 }
         )
-        let wrapped = MarqueeTextEngine.pixelFrame(
+        let later = MarqueeTextEngine.pixelFrame(
             text: text,
             maxDisplayWidth: 4,
-            tick: 12,
+            tick: 40,
             leadingPauseTicks: 0,
             trailingPauseTicks: 0,
             characterWidth: { _ in 1 }
         )
 
-        try expectEqual(frame, MarqueeFrame(text: "    ", isScrolling: true))
-        try expectEqual(wrapped, MarqueeFrame(text: "abcd", isScrolling: true))
+        try expectEqual(tail, MarqueeFrame(text: "cdef", isScrolling: true))
+        try expectEqual(later, MarqueeFrame(text: "cdef", isScrolling: true))
     }
 }
