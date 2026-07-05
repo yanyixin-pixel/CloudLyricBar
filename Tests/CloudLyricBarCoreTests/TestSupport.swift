@@ -10,7 +10,19 @@ struct TestFailure: Error, CustomStringConvertible {
 
 struct TestCase: Sendable {
     let name: String
-    let run: @Sendable () throws -> Void
+    let run: @Sendable () async throws -> Void
+
+    init(name: String, run: @escaping @Sendable () throws -> Void) {
+        self.name = name
+        self.run = {
+            try run()
+        }
+    }
+
+    init(name: String, run: @escaping @Sendable () async throws -> Void) {
+        self.name = name
+        self.run = run
+    }
 }
 
 enum TestRegistry {
@@ -19,6 +31,7 @@ enum TestRegistry {
         + lyricSyncEngineTests
         + marqueeTextEngineTests
         + netEaseDTOTests
+        + netEaseAPIClientTests
 }
 
 func expectEqual<T: Equatable>(_ actual: T, _ expected: T, _ message: String? = nil) throws {
@@ -42,7 +55,7 @@ func expectFalse(_ condition: Bool, _ message: String? = nil) throws {
 
 @main
 struct TestRunner {
-    static func main() {
+    static func main() async {
         let filter: String?
 
         do {
@@ -70,7 +83,7 @@ struct TestRunner {
 
         for test in tests {
             do {
-                try test.run()
+                try await test.run()
                 print("PASS \(test.name)")
             } catch {
                 failures += 1
