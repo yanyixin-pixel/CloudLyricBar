@@ -37,7 +37,7 @@ public protocol NetEaseAPIClient: Sendable {
     func fetchLyrics(songID: String) async throws -> [LyricLine]
 }
 
-public struct URLSessionNetEaseAPIClient: NetEaseAPIClient, @unchecked Sendable {
+public struct URLSessionNetEaseAPIClient: NetEaseAPIClient {
     public let baseURL: URL
     private let transport: any HTTPTransport
     private let decoder: JSONDecoder
@@ -85,7 +85,7 @@ public struct URLSessionNetEaseAPIClient: NetEaseAPIClient, @unchecked Sendable 
             throw NetEaseAPIError.invalidURL
         }
 
-        components.path = path
+        components.path = joinedPath(basePath: components.path, endpointPath: path)
         components.queryItems = queryItems
 
         guard let url = components.url else {
@@ -93,5 +93,20 @@ public struct URLSessionNetEaseAPIClient: NetEaseAPIClient, @unchecked Sendable 
         }
 
         return URLRequest(url: url)
+    }
+
+    private func joinedPath(basePath: String, endpointPath: String) -> String {
+        let trimmedBasePath = basePath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let trimmedEndpointPath = endpointPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+
+        if trimmedBasePath.isEmpty {
+            return "/" + trimmedEndpointPath
+        }
+
+        if trimmedEndpointPath.isEmpty {
+            return "/" + trimmedBasePath
+        }
+
+        return "/" + trimmedBasePath + "/" + trimmedEndpointPath
     }
 }

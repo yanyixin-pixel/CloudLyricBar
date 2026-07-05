@@ -7,6 +7,10 @@ let netEaseAPIClientTests: [TestCase] = [
         run: NetEaseAPIClientTests.testSearchBuildsExpectedRequestAndDecodesSongs
     ),
     TestCase(
+        name: "NetEaseAPIClientTests.testSearchPreservesBaseURLPathPrefix",
+        run: NetEaseAPIClientTests.testSearchPreservesBaseURLPathPrefix
+    ),
+    TestCase(
         name: "NetEaseAPIClientTests.testFetchLyricsDecodesLines",
         run: NetEaseAPIClientTests.testFetchLyricsDecodesLines
     ),
@@ -31,6 +35,21 @@ enum NetEaseAPIClientTests {
         try expectQueryItem(request.url, name: "keywords", value: "一路向北")
         try expectQueryItem(request.url, name: "type", value: "1")
         try expectEqual(songs.first?.title, "一路向北")
+    }
+
+    static func testSearchPreservesBaseURLPathPrefix() async throws {
+        let transport = FakeHTTPTransport(data: try fixtureData(named: "search"))
+        let client = URLSessionNetEaseAPIClient(
+            baseURL: try requireURL("https://music.example/api"),
+            transport: transport
+        )
+
+        _ = try await client.searchSongs(keyword: "一路向北")
+        let request = try await transport.requireRequest()
+
+        try expectEqual(request.url?.path, "/api/search")
+        try expectQueryItem(request.url, name: "keywords", value: "一路向北")
+        try expectQueryItem(request.url, name: "type", value: "1")
     }
 
     static func testFetchLyricsDecodesLines() async throws {
