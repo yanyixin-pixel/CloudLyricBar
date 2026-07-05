@@ -9,6 +9,10 @@ let lyricParserTests: [TestCase] = [
     TestCase(
         name: "LyricParserTests.testSkipsMetadataAndBlankLyricLines",
         run: LyricParserTests.testSkipsMetadataAndBlankLyricLines
+    ),
+    TestCase(
+        name: "LyricParserTests.testSkipsMalformedTimestamps",
+        run: LyricParserTests.testSkipsMalformedTimestamps
     )
 ]
 
@@ -41,5 +45,19 @@ enum LyricParserTests {
         let lines = LyricParser.parse(raw)
 
         try expectEqual(lines, [LyricLine(startTime: 2, text: "保留这一句")])
+    }
+
+    static func testSkipsMalformedTimestamps() throws {
+        let raw = """
+        [nan:01.00]x
+        [inf:01.00]x
+        [-01:02.00]x
+        [00:60.00]x
+        [00:03.00]valid
+        """
+
+        let lines = LyricParser.parse(raw)
+
+        try expectEqual(lines, [LyricLine(startTime: 3, text: "valid")])
     }
 }

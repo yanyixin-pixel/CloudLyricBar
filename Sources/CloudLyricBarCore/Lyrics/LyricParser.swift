@@ -42,6 +42,9 @@ public enum LyricParser {
         guard parts.count == 2,
               let minutes = TimeInterval(parts[0]),
               let seconds = TimeInterval(parts[1]),
+              minutes.isFinite,
+              seconds.isFinite,
+              minutes >= 0,
               seconds >= 0,
               seconds < 60
         else {

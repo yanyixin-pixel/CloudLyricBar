@@ -9,6 +9,10 @@ let lyricSyncEngineTests: [TestCase] = [
     TestCase(
         name: "LyricSyncEngineTests.testBeforeFirstLineReturnsFirstAsNext",
         run: LyricSyncEngineTests.testBeforeFirstLineReturnsFirstAsNext
+    ),
+    TestCase(
+        name: "LyricSyncEngineTests.testEmptyLinesReturnNilContext",
+        run: LyricSyncEngineTests.testEmptyLinesReturnNilContext
     )
 ]
 
@@ -34,5 +38,13 @@ enum LyricSyncEngineTests {
         try expectEqual(context.previous, nil)
         try expectEqual(context.current, nil)
         try expectEqual(context.next, first)
+    }
+
+    static func testEmptyLinesReturnNilContext() throws {
+        let context = LyricSyncEngine.context(at: 10, in: [])
+
+        try expectEqual(context.previous, nil)
+        try expectEqual(context.current, nil)
+        try expectEqual(context.next, nil)
     }
 }
