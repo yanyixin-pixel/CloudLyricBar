@@ -15,6 +15,10 @@ let package = Package(
         .executable(
             name: "CloudLyricBarApp",
             targets: ["CloudLyricBarApp"]
+        ),
+        .executable(
+            name: "CloudLyricBarCoreTests",
+            targets: ["CloudLyricBarCoreTests"]
         )
     ],
     targets: [
@@ -25,9 +29,10 @@ let package = Package(
             name: "CloudLyricBarApp",
             dependencies: ["CloudLyricBarCore"]
         ),
-        .testTarget(
+        .executableTarget(
             name: "CloudLyricBarCoreTests",
             dependencies: ["CloudLyricBarCore"],
+            path: "Tests/CloudLyricBarCoreTests",
             resources: [
                 .process("Fixtures")
             ]

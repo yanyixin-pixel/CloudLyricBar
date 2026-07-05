@@ -1,8 +1,22 @@
-import XCTest
-@testable import CloudLyricBarCore
+import CloudLyricBarCore
 
-final class PlaybackModelsTests: XCTestCase {
-    func testMenuBarTitleUsesLyricWhenPlaying() {
+let playbackModelTests: [TestCase] = [
+    TestCase(
+        name: "PlaybackModelsTests.testMenuBarTitleUsesLyricWhenPlaying",
+        run: PlaybackModelsTests.testMenuBarTitleUsesLyricWhenPlaying
+    ),
+    TestCase(
+        name: "PlaybackModelsTests.testMenuBarTitleFallsBackToSongTitleWhenLyricMissing",
+        run: PlaybackModelsTests.testMenuBarTitleFallsBackToSongTitleWhenLyricMissing
+    ),
+    TestCase(
+        name: "PlaybackModelsTests.testMenuBarTitleShowsIdleWhenClientIsClosed",
+        run: PlaybackModelsTests.testMenuBarTitleShowsIdleWhenClientIsClosed
+    )
+]
+
+enum PlaybackModelsTests {
+    static func testMenuBarTitleUsesLyricWhenPlaying() throws {
         let state = MenuBarDisplayState(
             playback: .playing,
             lyricText: "在云端轻轻唱",
@@ -10,11 +24,11 @@ final class PlaybackModelsTests: XCTestCase {
             isClientRunning: true
         )
 
-        XCTAssertEqual(state.title, "♪ 在云端轻轻唱")
-        XCTAssertTrue(state.shouldAnimate)
+        try expectEqual(state.title, "♪ 在云端轻轻唱")
+        try expectTrue(state.shouldAnimate)
     }
 
-    func testMenuBarTitleFallsBackToSongTitleWhenLyricMissing() {
+    static func testMenuBarTitleFallsBackToSongTitleWhenLyricMissing() throws {
         let state = MenuBarDisplayState(
             playback: .playing,
             lyricText: nil,
@@ -22,11 +36,11 @@ final class PlaybackModelsTests: XCTestCase {
             isClientRunning: true
         )
 
-        XCTAssertEqual(state.title, "♪ 晴天")
-        XCTAssertFalse(state.shouldAnimate)
+        try expectEqual(state.title, "♪ 晴天")
+        try expectFalse(state.shouldAnimate)
     }
 
-    func testMenuBarTitleShowsIdleWhenClientIsClosed() {
+    static func testMenuBarTitleShowsIdleWhenClientIsClosed() throws {
         let state = MenuBarDisplayState(
             playback: .stopped,
             lyricText: nil,
@@ -34,7 +48,7 @@ final class PlaybackModelsTests: XCTestCase {
             isClientRunning: false
         )
 
-        XCTAssertEqual(state.title, "♪")
-        XCTAssertFalse(state.shouldAnimate)
+        try expectEqual(state.title, "♪")
+        try expectFalse(state.shouldAnimate)
     }
 }
