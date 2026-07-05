@@ -15,12 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             AccessibilityPlaybackStrategy(permissionCoordinator: permissionCoordinator)
         ])
-        let audioPlayer = AVFoundationSongAudioPlayer()
+        let nowPlayingProvider = MediaRemoteNowPlayingService()
         let viewModel = CloudLyricBarViewModel(
             apiClient: api,
             playbackControl: playback,
             permissionCoordinator: permissionCoordinator,
-            audioPlayer: audioPlayer
+            nowPlayingProvider: nowPlayingProvider
         )
         let popoverController = PopoverController(viewModel: viewModel)
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)

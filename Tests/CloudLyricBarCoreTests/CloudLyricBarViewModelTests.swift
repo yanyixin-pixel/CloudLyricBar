@@ -19,8 +19,8 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testLoadPlaylistsUpdatesState
     ),
     TestCase(
-        name: "CloudLyricBarViewModelTests.testSelectingSongSendsOpenSongCommand",
-        run: CloudLyricBarViewModelTests.testSelectingSongSendsOpenSongCommand
+        name: "CloudLyricBarViewModelTests.testSelectingSongUsesItAsLyricOverrideWithoutStartingPlayback",
+        run: CloudLyricBarViewModelTests.testSelectingSongUsesItAsLyricOverrideWithoutStartingPlayback
     ),
     TestCase(
         name: "CloudLyricBarViewModelTests.testSelectingSongUpdatesCurrentSongAndLyrics",
@@ -31,8 +31,16 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testSelectingSongStartsAudioPlayerAndSyncsLyricsFromPlayerPosition
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testExternalNowPlayingSongSearchesNetEaseAndUsesResolvedLyrics",
+        run: CloudLyricBarViewModelTests.testExternalNowPlayingSongSearchesNetEaseAndUsesResolvedLyrics
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics",
         run: CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testRefreshUsesNowPlayingProviderWhenAvailable",
+        run: CloudLyricBarViewModelTests.testRefreshUsesNowPlayingProviderWhenAvailable
     ),
     TestCase(
         name: "CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage",
@@ -112,14 +120,30 @@ enum CloudLyricBarViewModelTests {
         ])
     }
 
-    static func testSelectingSongSendsOpenSongCommand() async throws {
+    static func testSelectingSongUsesItAsLyricOverrideWithoutStartingPlayback() async throws {
         let playback = RecordingPlaybackControl()
-        let model = await CloudLyricBarViewModel(apiClient: FakeNetEaseAPIClient(), playbackControl: playback)
+        let api = FakeNetEaseAPIClient(lines: [
+            LyricLine(startTime: 0, text: "开头一句"),
+            LyricLine(startTime: 8, text: "手动校正这一句")
+        ])
+        let model = await CloudLyricBarViewModel(apiClient: api, playbackControl: playback)
         let song = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
 
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(
+                song: Song(id: "external:mediaremote:一路向北:周杰伦", title: "一路向北", artist: "周杰伦"),
+                playback: .playing,
+                position: 8
+            ),
+            isClientRunning: true
+        )
+        await api.clearRecordedCalls()
         await model.play(song)
 
-        try await expectEqual(playback.commands, [.openSong(id: "1901371647")])
+        try await expectEqual(playback.commands, [])
+        try await expectEqual(api.fetchedLyricSongIDs(), ["1901371647"])
+        try await expectEqual(model.currentSong, song)
+        try await expectEqual(model.lyricContext.current?.text, "手动校正这一句")
         try await expectEqual(model.message, nil)
     }
 
@@ -164,6 +188,30 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(model.menuBarTitle, "♪ 真实进度这一句")
     }
 
+    static func testExternalNowPlayingSongSearchesNetEaseAndUsesResolvedLyrics() async throws {
+        let externalSong = Song(id: "external:netease", title: "一路向北", artist: "周杰伦")
+        let resolvedSong = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+        let api = FakeNetEaseAPIClient(
+            searchResults: [resolvedSong],
+            lines: [
+                LyricLine(startTime: 0, text: "开头一句"),
+                LyricLine(startTime: 8, text: "匹配后的歌词")
+            ]
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api)
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: externalSong, playback: .playing, position: 8),
+            isClientRunning: true
+        )
+
+        try await expectEqual(api.searchKeywords(), ["一路向北 周杰伦"])
+        try await expectEqual(api.fetchedLyricSongIDs(), ["1901371647"])
+        try await expectEqual(model.currentSong, resolvedSong)
+        try await expectEqual(model.lyricContext.current?.text, "匹配后的歌词")
+        try await expectEqual(model.menuBarTitle, "♪ 匹配后的歌词")
+    }
+
     static func testRefreshEstimatedPlaybackAdvancesLyrics() async throws {
         let api = FakeNetEaseAPIClient(lines: [
             LyricLine(startTime: 0, text: "开头一句"),
@@ -181,6 +229,30 @@ enum CloudLyricBarViewModelTests {
 
         try await expectEqual(model.menuBarTitle, "♪ 下一句")
         try await expectEqual(model.lyricContext.current?.text, "下一句")
+    }
+
+    static func testRefreshUsesNowPlayingProviderWhenAvailable() async throws {
+        let externalSong = Song(id: "external:mediaremote:一路向北:周杰伦", title: "一路向北", artist: "周杰伦")
+        let resolvedSong = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+        let api = FakeNetEaseAPIClient(
+            searchResults: [resolvedSong],
+            lines: [
+                LyricLine(startTime: 0, text: "开头一句"),
+                LyricLine(startTime: 8, text: "系统进度这一句")
+            ]
+        )
+        let provider = RecordingNowPlayingProvider(
+            snapshot: NowPlayingSnapshot(song: externalSong, playback: .playing, position: 8)
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api, nowPlayingProvider: provider)
+
+        await model.refreshEstimatedPlayback()
+
+        try await expectEqual(provider.snapshotCallCount(), 1)
+        try await expectEqual(api.searchKeywords(), ["一路向北 周杰伦"])
+        try await expectEqual(model.currentSong, resolvedSong)
+        try await expectEqual(model.lyricContext.current?.text, "系统进度这一句")
+        try await expectEqual(model.menuBarTitle, "♪ 系统进度这一句")
     }
 
     static func testPlaybackCommandFailureShowsMessage() async throws {
@@ -215,6 +287,8 @@ private actor FakeNetEaseAPIClient: NetEaseAPIClient {
     private let streamURLValue: URL
     private(set) var searchCallCount = 0
     private(set) var fetchLyricsCallCount = 0
+    private var searchedKeywords: [String] = []
+    private var lyricSongIDs: [String] = []
     private var streamURLSongIDs: [String] = []
 
     init(
@@ -235,11 +309,13 @@ private actor FakeNetEaseAPIClient: NetEaseAPIClient {
 
     func searchSongs(keyword: String) async throws -> [Song] {
         searchCallCount += 1
+        searchedKeywords.append(keyword)
         return searchResultsValue
     }
 
     func fetchLyrics(songID: String) async throws -> [LyricLine] {
         fetchLyricsCallCount += 1
+        lyricSongIDs.append(songID)
         return linesValue
     }
 
@@ -250,6 +326,22 @@ private actor FakeNetEaseAPIClient: NetEaseAPIClient {
 
     func fetchedStreamURLSongIDs() -> [String] {
         streamURLSongIDs
+    }
+
+    func searchKeywords() -> [String] {
+        searchedKeywords
+    }
+
+    func fetchedLyricSongIDs() -> [String] {
+        lyricSongIDs
+    }
+
+    func clearRecordedCalls() {
+        searchedKeywords = []
+        lyricSongIDs = []
+        streamURLSongIDs = []
+        searchCallCount = 0
+        fetchLyricsCallCount = 0
     }
 }
 
@@ -294,6 +386,24 @@ private actor RecordingSongAudioPlayer: SongAudioPlaying {
 
     func playRequests() -> [SongAudioPlayRequest] {
         requests
+    }
+}
+
+private actor RecordingNowPlayingProvider: NowPlayingProviding {
+    private let snapshotValue: NowPlayingSnapshot
+    private var calls = 0
+
+    init(snapshot: NowPlayingSnapshot) {
+        snapshotValue = snapshot
+    }
+
+    func snapshot() async -> NowPlayingSnapshot {
+        calls += 1
+        return snapshotValue
+    }
+
+    func snapshotCallCount() -> Int {
+        calls
     }
 }
 

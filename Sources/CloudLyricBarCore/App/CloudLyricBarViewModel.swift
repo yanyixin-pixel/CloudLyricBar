@@ -15,7 +15,9 @@ public final class CloudLyricBarViewModel: ObservableObject {
     private let playbackControl: (any PlaybackControlling)?
     private let permissionCoordinator: PermissionCoordinator?
     private let audioPlayer: (any SongAudioPlaying)?
+    private let nowPlayingProvider: (any NowPlayingProviding)?
     private var cachedLyrics: [String: [LyricLine]] = [:]
+    private var resolvedExternalSongs: [ExternalSongKey: Song] = [:]
     private var latestNowPlaying: NowPlayingSnapshot?
     private var latestClientRunning = false
 
@@ -23,35 +25,40 @@ public final class CloudLyricBarViewModel: ObservableObject {
         apiClient: any NetEaseAPIClient,
         playbackControl: (any PlaybackControlling)? = nil,
         permissionCoordinator: PermissionCoordinator? = nil,
-        audioPlayer: (any SongAudioPlaying)? = nil
+        audioPlayer: (any SongAudioPlaying)? = nil,
+        nowPlayingProvider: (any NowPlayingProviding)? = nil
     ) {
         self.apiClient = apiClient
         self.playbackControl = playbackControl
         self.permissionCoordinator = permissionCoordinator
         self.audioPlayer = audioPlayer
+        self.nowPlayingProvider = nowPlayingProvider
     }
 
     public func apply(nowPlaying: NowPlayingSnapshot, isClientRunning: Bool) async {
         latestNowPlaying = nowPlaying
         latestClientRunning = isClientRunning
-        currentSong = nowPlaying.song
         playback = nowPlaying.playback
 
+        var displaySong = nowPlaying.song
         var lines: [LyricLine] = []
         if let song = nowPlaying.song {
             do {
-                lines = try await lyrics(for: song.id)
+                let lyricSong = try await lyricSource(for: song)
+                displaySong = lyricSong
+                lines = try await lyrics(for: lyricSong.id)
                 message = nil
             } catch {
                 message = "歌词加载失败"
             }
         }
 
+        currentSong = displaySong
         lyricContext = LyricSyncEngine.context(at: nowPlaying.position ?? 0, in: lines)
         let display = MenuBarDisplayState(
             playback: nowPlaying.playback,
             lyricText: lyricContext.current?.text,
-            fallbackTitle: nowPlaying.song?.title,
+            fallbackTitle: displaySong?.title,
             isClientRunning: isClientRunning
         )
         menuBarTitle = display.title
@@ -88,9 +95,10 @@ public final class CloudLyricBarViewModel: ObservableObject {
                 try await audioPlayer.play(song: song, streamURL: streamURL)
                 await apply(nowPlaying: await audioPlayer.snapshot(), isClientRunning: true)
             } else {
-                try await playbackControl?.send(.openSong(id: song.id))
+                let position = latestNowPlaying?.position ?? 0
+                let playback = latestNowPlaying?.playback ?? .playing
                 await apply(
-                    nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 0),
+                    nowPlaying: NowPlayingSnapshot(song: song, playback: playback, position: position),
                     isClientRunning: true
                 )
             }
@@ -101,6 +109,11 @@ public final class CloudLyricBarViewModel: ObservableObject {
     }
 
     public func refreshEstimatedPlayback(at date: Date = Date()) async {
+        if let nowPlayingProvider {
+            await apply(nowPlaying: await nowPlayingProvider.snapshot(), isClientRunning: true)
+            return
+        }
+
         if let audioPlayer {
             await apply(nowPlaying: await audioPlayer.snapshot(), isClientRunning: true)
             return
@@ -139,5 +152,34 @@ public final class CloudLyricBarViewModel: ObservableObject {
         let lines = try await apiClient.fetchLyrics(songID: songID)
         cachedLyrics[songID] = lines
         return lines
+    }
+
+    private func lyricSource(for song: Song) async throws -> Song {
+        guard song.id.hasPrefix("external:") else {
+            return song
+        }
+
+        let key = ExternalSongKey(song: song)
+        if let cached = resolvedExternalSongs[key] {
+            return cached
+        }
+
+        let keyword = [song.title, song.artist]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        let match = try await apiClient.searchSongs(keyword: keyword).first ?? song
+        resolvedExternalSongs[key] = match
+        return match
+    }
+}
+
+private struct ExternalSongKey: Hashable {
+    let title: String
+    let artist: String
+
+    init(song: Song) {
+        title = song.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        artist = song.artist.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }
