@@ -47,6 +47,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testRefreshUsesNowPlayingProviderWhenAvailable
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testRefreshEstimatesNowPlayingProviderPosition",
+        run: CloudLyricBarViewModelTests.testRefreshEstimatesNowPlayingProviderPosition
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage",
         run: CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage
     ),
@@ -276,6 +280,28 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(model.currentSong, resolvedSong)
         try await expectEqual(model.lyricContext.current?.text, "系统进度这一句")
         try await expectEqual(model.menuBarTitle, "♪ 系统进度这一句")
+    }
+
+    static func testRefreshEstimatesNowPlayingProviderPosition() async throws {
+        let song = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+        let api = FakeNetEaseAPIClient(lines: [
+            LyricLine(startTime: 0, text: "开头一句"),
+            LyricLine(startTime: 8, text: "更接近真实进度")
+        ])
+        let provider = RecordingNowPlayingProvider(
+            snapshot: NowPlayingSnapshot(
+                song: song,
+                playback: .playing,
+                position: 0,
+                capturedAt: Date(timeIntervalSince1970: 100)
+            )
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api, nowPlayingProvider: provider)
+
+        await model.refreshEstimatedPlayback(at: Date(timeIntervalSince1970: 109))
+
+        try await expectEqual(model.lyricContext.current?.text, "更接近真实进度")
+        try await expectEqual(model.menuBarTitle, "♪ 更接近真实进度")
     }
 
     static func testPlaybackCommandFailureShowsMessage() async throws {

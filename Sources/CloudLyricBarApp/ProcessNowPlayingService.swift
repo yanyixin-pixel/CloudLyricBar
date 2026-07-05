@@ -16,7 +16,7 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
     }
 
     func snapshot() async -> NowPlayingSnapshot {
-        snapshotSync()
+        TimerPositionEstimator.estimate(from: snapshotSync())
     }
 
     private func snapshotSync() -> NowPlayingSnapshot {
@@ -151,7 +151,7 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
             }
             RunLoop.main.run(until: Date().addingTimeInterval(0.1))
             _ = semaphore.wait(timeout: .now() + 2)
-            Thread.sleep(forTimeInterval: 0.25)
+            Thread.sleep(forTimeInterval: 0.08)
         }
         """
     }

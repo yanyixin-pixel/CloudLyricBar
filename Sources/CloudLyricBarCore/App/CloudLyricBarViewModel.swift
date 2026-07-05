@@ -117,7 +117,8 @@ public final class CloudLyricBarViewModel: ObservableObject {
 
     public func refreshEstimatedPlayback(at date: Date = Date()) async {
         if let nowPlayingProvider {
-            await apply(nowPlaying: await nowPlayingProvider.snapshot(), isClientRunning: true)
+            let snapshot = await nowPlayingProvider.snapshot()
+            await apply(nowPlaying: TimerPositionEstimator.estimate(from: snapshot, at: date), isClientRunning: true)
             return
         }
 

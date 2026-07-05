@@ -6,9 +6,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var viewModel: CloudLyricBarViewModel?
     private var statusBarController: StatusBarController?
     private var lyricRefreshTimer: Timer?
+    private var apiServerManager: NetEaseAPIServerManager?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let api = URLSessionNetEaseAPIClient(baseURL: URL(string: "http://localhost:3000")!)
+        let apiBaseURL = URL(string: "http://localhost:3000")!
+        let apiServerManager = NetEaseAPIServerManager(baseURL: apiBaseURL)
+        self.apiServerManager = apiServerManager
+        Task.detached {
+            _ = await apiServerManager.ensureRunning()
+        }
+
+        let api = URLSessionNetEaseAPIClient(baseURL: apiBaseURL)
         let permissionCoordinator = PermissionCoordinator(accessibilityProbe: MacAccessibilityPermissionProbe())
         let playback = PlaybackControlService(strategies: [
             NetEaseDeepLinkStrategy { url in
@@ -26,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let popoverController = PopoverController(viewModel: viewModel)
         self.viewModel = viewModel
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)
-        lyricRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak viewModel] _ in
+        lyricRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak viewModel] _ in
             Task { @MainActor in
                 await viewModel?.refreshEstimatedPlayback()
             }
