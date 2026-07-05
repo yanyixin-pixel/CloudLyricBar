@@ -6,14 +6,13 @@ import Combine
 final class StatusBarController: NSObject {
     private static let statusItemLength: CGFloat = 340
     private static let visibleCharacterCount = 32
-    private static let leadingPauseTicks = 6
-    private static let trailingPauseTicks = 5
+    private static let leadingPauseTicks = 3
+    private static let trailingPauseTicks = 3
 
     private let statusItem: NSStatusItem
     private let popoverController: PopoverController
     private var cancellables = Set<AnyCancellable>()
-    private var fullTitle = "♪"
-    private var marqueeTick = 0
+    private var marqueeState = MarqueeTitleState()
 
     init(viewModel: CloudLyricBarViewModel, popoverController: PopoverController) {
         statusItem = NSStatusBar.system.statusItem(withLength: Self.statusItemLength)
@@ -21,7 +20,7 @@ final class StatusBarController: NSObject {
         super.init()
 
         if let button = statusItem.button {
-            fullTitle = viewModel.menuBarTitle
+            marqueeState.updateTitle(viewModel.menuBarTitle)
             button.title = viewModel.menuBarTitle
             button.toolTip = viewModel.menuBarTitle
             button.cell?.lineBreakMode = .byClipping
@@ -51,25 +50,22 @@ final class StatusBarController: NSObject {
     }
 
     private func updateFullTitle(_ title: String) {
-        fullTitle = title
-        marqueeTick = 0
+        marqueeState.updateTitle(title)
         renderTitle()
     }
 
     private func advanceMarquee() {
-        marqueeTick += 1
+        marqueeState.advance()
         renderTitle()
     }
 
     private func renderTitle() {
-        let frame = MarqueeTextEngine.pausedFrame(
-            text: fullTitle,
+        let frame = marqueeState.frame(
             visibleCharacterCount: Self.visibleCharacterCount,
-            tick: marqueeTick,
             leadingPauseTicks: Self.leadingPauseTicks,
             trailingPauseTicks: Self.trailingPauseTicks
         )
         statusItem.button?.title = frame.text
-        statusItem.button?.toolTip = fullTitle
+        statusItem.button?.toolTip = marqueeState.title
     }
 }

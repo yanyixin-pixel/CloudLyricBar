@@ -10,6 +10,43 @@ public struct MarqueeFrame: Equatable, Sendable {
     }
 }
 
+public struct MarqueeTitleState: Equatable, Sendable {
+    public private(set) var title: String
+    public private(set) var tick: Int
+
+    public init(title: String = "♪", tick: Int = 0) {
+        self.title = title
+        self.tick = tick
+    }
+
+    public mutating func updateTitle(_ newTitle: String) {
+        guard newTitle != title else {
+            return
+        }
+
+        title = newTitle
+        tick = 0
+    }
+
+    public mutating func advance() {
+        tick += 1
+    }
+
+    public func frame(
+        visibleCharacterCount: Int,
+        leadingPauseTicks: Int,
+        trailingPauseTicks: Int
+    ) -> MarqueeFrame {
+        MarqueeTextEngine.pausedFrame(
+            text: title,
+            visibleCharacterCount: visibleCharacterCount,
+            tick: tick,
+            leadingPauseTicks: leadingPauseTicks,
+            trailingPauseTicks: trailingPauseTicks
+        )
+    }
+}
+
 public enum MarqueeTextEngine {
     public static func frame(text: String, visibleCharacterCount: Int, tick: Int) -> MarqueeFrame {
         guard visibleCharacterCount > 0 else {

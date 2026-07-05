@@ -20,6 +20,10 @@ let marqueeTextEngineTests: [TestCase] = [
     TestCase(
         name: "MarqueeTextEngineTests.testLongTextWithPausesHoldsAtStartAndEnd",
         run: MarqueeTextEngineTests.testLongTextWithPausesHoldsAtStartAndEnd
+    ),
+    TestCase(
+        name: "MarqueeTextEngineTests.testMarqueeTitleStateDoesNotResetTickForSameTitle",
+        run: MarqueeTextEngineTests.testMarqueeTitleStateDoesNotResetTickForSameTitle
     )
 ]
 
@@ -83,5 +87,21 @@ enum MarqueeTextEngineTests {
         try expectEqual(moving, MarqueeFrame(text: "bcde", isScrolling: true))
         try expectEqual(end, MarqueeFrame(text: "ghij", isScrolling: true))
         try expectEqual(wrapped, MarqueeFrame(text: "abcd", isScrolling: true))
+    }
+
+    static func testMarqueeTitleStateDoesNotResetTickForSameTitle() throws {
+        var state = MarqueeTitleState(title: "abcdefghij")
+
+        state.advance()
+        state.advance()
+        state.updateTitle("abcdefghij")
+
+        let frame = state.frame(
+            visibleCharacterCount: 4,
+            leadingPauseTicks: 2,
+            trailingPauseTicks: 0
+        )
+
+        try expectEqual(frame, MarqueeFrame(text: "bcde", isScrolling: true))
     }
 }
