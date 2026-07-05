@@ -2,20 +2,23 @@ import CloudLyricBarCore
 import SwiftUI
 
 struct PopoverView: View {
+    private static let width: CGFloat = 360
+    private static let height: CGFloat = 292
+
     @ObservedObject var viewModel: CloudLyricBarViewModel
     let quitAction: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             currentSongHeader
             playbackControls
             lyricContext
             statusMessage
-            Spacer(minLength: 0)
             quitButton
         }
-        .padding(14)
-        .frame(width: 360, height: 248)
+        .padding(18)
+        .frame(width: Self.width, height: Self.height, alignment: .topLeading)
+        .clipped()
     }
 
     private var currentSongHeader: some View {
@@ -54,19 +57,22 @@ struct PopoverView: View {
             }
         }
         .buttonStyle(.borderless)
-        .frame(height: 26)
+        .frame(height: 28)
     }
 
     private var quitButton: some View {
-        HStack {
-            Spacer(minLength: 0)
-            Button(action: quitAction) {
-                Label("退出", systemImage: "power")
+        VStack(spacing: 8) {
+            Divider()
+            HStack {
+                Spacer(minLength: 0)
+                Button(action: quitAction) {
+                    Label("退出", systemImage: "power")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
             }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 22, maxHeight: 22)
+        .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28, alignment: .bottom)
     }
 
     private var lyricContext: some View {
@@ -89,7 +95,7 @@ struct PopoverView: View {
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, minHeight: 84, maxHeight: 84, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 92, maxHeight: 92, alignment: .topLeading)
     }
 
     @ViewBuilder
