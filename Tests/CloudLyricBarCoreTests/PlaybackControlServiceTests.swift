@@ -13,6 +13,14 @@ let playbackControlServiceTests: [TestCase] = [
     TestCase(
         name: "PlaybackControlServiceTests.testNetEaseDeepLinkStrategyOpensSongURL",
         run: PlaybackControlServiceTests.testNetEaseDeepLinkStrategyOpensSongURL
+    ),
+    TestCase(
+        name: "PlaybackControlServiceTests.testNetEaseDeepLinkStrategyRejectsInvalidSongIDs",
+        run: PlaybackControlServiceTests.testNetEaseDeepLinkStrategyRejectsInvalidSongIDs
+    ),
+    TestCase(
+        name: "PlaybackControlServiceTests.testConcurrentSendsCompleteInCallerOrder",
+        run: PlaybackControlServiceTests.testConcurrentSendsCompleteInCallerOrder
     )
 ]
 
@@ -20,12 +28,14 @@ enum PlaybackControlServiceTests {
     static func testUsesFirstStrategyThatCanHandleCommand() async throws {
         let first = RecordingPlaybackControlStrategy(canSendResult: false)
         let second = RecordingPlaybackControlStrategy(canSendResult: true)
-        let service = PlaybackControlService(strategies: [first, second])
+        let third = RecordingPlaybackControlStrategy(canSendResult: true)
+        let service = PlaybackControlService(strategies: [first, second, third])
 
         try await service.send(.playPause)
 
         try await expectEqual(first.sentCommands(), [])
         try await expectEqual(second.sentCommands(), [.playPause])
+        try await expectEqual(third.sentCommands(), [])
     }
 
     static func testThrowsWhenNoStrategyCanHandleCommand() async throws {
@@ -61,6 +71,44 @@ enum PlaybackControlServiceTests {
             try expectEqual(error, .noAvailableStrategy)
         }
     }
+
+    static func testNetEaseDeepLinkStrategyRejectsInvalidSongIDs() async throws {
+        let invalidIDs = ["123?x=y", "abc/def", "123#frag", ""]
+
+        for id in invalidIDs {
+            let recorder = URLRecorder()
+            let strategy = NetEaseDeepLinkStrategy(opener: recorder.record)
+
+            do {
+                try await strategy.send(.openSong(id: id))
+                throw TestFailure(message: "Expected noAvailableStrategy error for id \(id)")
+            } catch let error as PlaybackControlError {
+                try expectEqual(error, .noAvailableStrategy)
+            }
+
+            try expectEqual(recorder.recordedURLs(), [])
+        }
+    }
+
+    static func testConcurrentSendsCompleteInCallerOrder() async throws {
+        let strategy = DelayedRecordingPlaybackControlStrategy()
+        let service = PlaybackControlService(strategies: [strategy])
+
+        let first = Task {
+            try await service.send(.previous)
+        }
+
+        try await Task.sleep(nanoseconds: 10_000_000)
+
+        let second = Task {
+            try await service.send(.next)
+        }
+
+        try await first.value
+        try await second.value
+
+        try await expectEqual(strategy.completedCommands(), [.previous, .next])
+    }
 }
 
 private actor RecordingPlaybackControlStrategy: PlaybackControlStrategy {
@@ -80,6 +128,26 @@ private actor RecordingPlaybackControlStrategy: PlaybackControlStrategy {
     }
 
     func sentCommands() -> [PlaybackCommand] {
+        commands
+    }
+}
+
+private actor DelayedRecordingPlaybackControlStrategy: PlaybackControlStrategy {
+    private var commands: [PlaybackCommand] = []
+
+    func canSend(_ command: PlaybackCommand) async -> Bool {
+        true
+    }
+
+    func send(_ command: PlaybackCommand) async throws {
+        if command == .previous {
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        commands.append(command)
+    }
+
+    func completedCommands() -> [PlaybackCommand] {
         commands
     }
 }
