@@ -41,6 +41,14 @@ public final class CloudLyricBarViewModel: ObservableObject {
         playback = nowPlaying.playback
 
         var displaySong = nowPlaying.song
+        currentSong = displaySong
+        renderMenuBar(
+            playback: nowPlaying.playback,
+            lyricText: nil,
+            fallbackTitle: displaySong?.title,
+            isClientRunning: isClientRunning
+        )
+
         var lines: [LyricLine] = []
         if let song = nowPlaying.song {
             do {
@@ -55,13 +63,12 @@ public final class CloudLyricBarViewModel: ObservableObject {
 
         currentSong = displaySong
         lyricContext = LyricSyncEngine.context(at: nowPlaying.position ?? 0, in: lines)
-        let display = MenuBarDisplayState(
+        renderMenuBar(
             playback: nowPlaying.playback,
             lyricText: lyricContext.current?.text,
             fallbackTitle: displaySong?.title,
             isClientRunning: isClientRunning
         )
-        menuBarTitle = display.title
     }
 
     public func loadPlaylists(userID: String) async {
@@ -152,6 +159,21 @@ public final class CloudLyricBarViewModel: ObservableObject {
         let lines = try await apiClient.fetchLyrics(songID: songID)
         cachedLyrics[songID] = lines
         return lines
+    }
+
+    private func renderMenuBar(
+        playback: PlaybackState,
+        lyricText: String?,
+        fallbackTitle: String?,
+        isClientRunning: Bool
+    ) {
+        let display = MenuBarDisplayState(
+            playback: playback,
+            lyricText: lyricText,
+            fallbackTitle: fallbackTitle,
+            isClientRunning: isClientRunning
+        )
+        menuBarTitle = display.title
     }
 
     private func lyricSource(for song: Song) async throws -> Song {

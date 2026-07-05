@@ -35,6 +35,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testExternalNowPlayingSongSearchesNetEaseAndUsesResolvedLyrics
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes",
+        run: CloudLyricBarViewModelTests.testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics",
         run: CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics
     ),
@@ -212,6 +216,25 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(model.menuBarTitle, "♪ 匹配后的歌词")
     }
 
+    static func testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes() async throws {
+        let externalSong = Song(id: "external:mediaremote:一路向北:周杰伦", title: "一路向北", artist: "周杰伦")
+        let api = BlockingNetEaseAPIClient()
+        let model = await CloudLyricBarViewModel(apiClient: api)
+
+        let task = Task {
+            await model.apply(
+                nowPlaying: NowPlayingSnapshot(song: externalSong, playback: .playing, position: 8),
+                isClientRunning: true
+            )
+        }
+
+        try await api.waitUntilSearchStarted()
+        try await expectEqual(model.menuBarTitle, "♪ 一路向北")
+
+        await api.releaseSearch()
+        await task.value
+    }
+
     static func testRefreshEstimatedPlaybackAdvancesLyrics() async throws {
         let api = FakeNetEaseAPIClient(lines: [
             LyricLine(startTime: 0, text: "开头一句"),
@@ -358,6 +381,49 @@ private actor RecordingPlaybackControl: PlaybackControlling {
         if let error {
             throw error
         }
+    }
+}
+
+private actor BlockingNetEaseAPIClient: NetEaseAPIClient {
+    private var searchStartedContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var didStartSearch = false
+
+    func userPlaylists(userID: String) async throws -> [Playlist] {
+        []
+    }
+
+    func searchSongs(keyword: String) async throws -> [Song] {
+        didStartSearch = true
+        searchStartedContinuation?.resume()
+        searchStartedContinuation = nil
+        await withCheckedContinuation { continuation in
+            releaseContinuation = continuation
+        }
+        return [Song(id: "1901371647", title: "一路向北", artist: "周杰伦")]
+    }
+
+    func fetchLyrics(songID: String) async throws -> [LyricLine] {
+        [LyricLine(startTime: 0, text: "开头一句")]
+    }
+
+    func fetchSongStreamURL(songID: String) async throws -> URL {
+        URL(string: "https://music.example/default.mp3")!
+    }
+
+    func waitUntilSearchStarted() async throws {
+        if didStartSearch {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            searchStartedContinuation = continuation
+        }
+    }
+
+    func releaseSearch() {
+        releaseContinuation?.resume()
+        releaseContinuation = nil
     }
 }
 
