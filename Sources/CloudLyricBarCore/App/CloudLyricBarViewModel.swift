@@ -42,12 +42,16 @@ public final class CloudLyricBarViewModel: ObservableObject {
 
         var displaySong = nowPlaying.song
         currentSong = displaySong
-        renderMenuBar(
-            playback: nowPlaying.playback,
-            lyricText: nil,
-            fallbackTitle: displaySong?.title,
-            isClientRunning: isClientRunning
-        )
+        let cachedSource = displaySong.flatMap(cachedLyricSource)
+        let canRenderFromCache = cachedSource.flatMap { cachedLyrics[$0.id] } != nil
+        if !canRenderFromCache {
+            renderMenuBar(
+                playback: nowPlaying.playback,
+                lyricText: nil,
+                fallbackTitle: displaySong?.title,
+                isClientRunning: isClientRunning
+            )
+        }
 
         var lines: [LyricLine] = []
         if let song = nowPlaying.song {
@@ -174,7 +178,17 @@ public final class CloudLyricBarViewModel: ObservableObject {
             fallbackTitle: fallbackTitle,
             isClientRunning: isClientRunning
         )
-        menuBarTitle = display.title
+        if menuBarTitle != display.title {
+            menuBarTitle = display.title
+        }
+    }
+
+    private func cachedLyricSource(for song: Song) -> Song? {
+        guard song.id.hasPrefix("external:") else {
+            return song
+        }
+
+        return resolvedExternalSongs[ExternalSongKey(song: song)]
     }
 
     private func lyricSource(for song: Song) async throws -> Song {

@@ -1,4 +1,5 @@
 import CloudLyricBarCore
+import Combine
 import Foundation
 
 let cloudLyricBarViewModelTests: [TestCase] = [
@@ -13,6 +14,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
     TestCase(
         name: "CloudLyricBarViewModelTests.testLyricsAreCachedPerSong",
         run: CloudLyricBarViewModelTests.testLyricsAreCachedPerSong
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testCachedRefreshDoesNotRepublishFallbackTitle",
+        run: CloudLyricBarViewModelTests.testCachedRefreshDoesNotRepublishFallbackTitle
     ),
     TestCase(
         name: "CloudLyricBarViewModelTests.testLoadPlaylistsUpdatesState",
@@ -113,6 +118,36 @@ enum CloudLyricBarViewModelTests {
         )
 
         try await expectEqual(api.fetchLyricsCallCount, 1)
+    }
+
+    @MainActor
+    static func testCachedRefreshDoesNotRepublishFallbackTitle() async throws {
+        let api = FakeNetEaseAPIClient(lines: [
+            LyricLine(startTime: 0, text: "When the sweet words and fevers all leave us right here in the cold")
+        ])
+        let model = CloudLyricBarViewModel(apiClient: api)
+        let song = Song(id: "long-song", title: "Hard Feelings/Loveless", artist: "Lorde")
+        var titles: [String] = []
+        let cancellable = model.$menuBarTitle
+            .dropFirst()
+            .sink { title in
+                titles.append(title)
+            }
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 0),
+            isClientRunning: true
+        )
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 1),
+            isClientRunning: true
+        )
+
+        cancellable.cancel()
+        try expectEqual(titles, [
+            "♪ Hard Feelings/Loveless",
+            "♪ When the sweet words and fevers all leave us right here in the cold"
+        ])
     }
 
     static func testLoadPlaylistsUpdatesState() async throws {
