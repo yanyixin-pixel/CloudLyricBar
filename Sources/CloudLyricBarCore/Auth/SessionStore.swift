@@ -42,7 +42,13 @@ public actor InMemorySessionStore: SessionStore {
 }
 
 public struct KeychainSessionStore: SessionStore {
-    public init() {}
+    private let service: String
+    private let account: String
+
+    public init(service: String = "CloudLyricBar.NetEaseSession", account: String = "default") {
+        self.service = service
+        self.account = account
+    }
 
     public func load() async throws -> NetEaseSession? {
         var query = baseQuery()
@@ -82,6 +88,11 @@ public struct KeychainSessionStore: SessionStore {
             addQuery[kSecValueData] = data
             let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
 
+            if addStatus == errSecDuplicateItem {
+                try updateExistingItem(query: query, attributes: attributes)
+                return
+            }
+
             guard addStatus == errSecSuccess else {
                 throw KeychainError.unhandledStatus(addStatus)
             }
@@ -101,8 +112,16 @@ public struct KeychainSessionStore: SessionStore {
     private func baseQuery() -> [CFString: Any] {
         [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: "CloudLyricBar.NetEaseSession",
-            kSecAttrAccount: "default"
+            kSecAttrService: service,
+            kSecAttrAccount: account
         ]
+    }
+
+    private func updateExistingItem(query: [CFString: Any], attributes: [CFString: Any]) throws {
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+
+        guard status == errSecSuccess else {
+            throw KeychainError.unhandledStatus(status)
+        }
     }
 }

@@ -41,19 +41,15 @@ public actor NetEaseAuthService {
         return state
     }
 
-    public func pollQRCode() async -> AuthState {
-        do {
-            switch try await qrLoginProvider.poll() {
-            case .waiting:
-                state = .waitingForScan
-            case .expired:
-                state = .failed("二维码已过期")
-            case .confirmed(let session):
-                try await sessionStore.save(session)
-                state = .authenticated(userID: session.userID)
-            }
-        } catch {
-            state = .failed(error.localizedDescription)
+    public func pollQRCode() async throws -> AuthState {
+        switch try await qrLoginProvider.poll() {
+        case .waiting:
+            state = .waitingForScan
+        case .expired:
+            state = .failed("二维码已过期")
+        case .confirmed(let session):
+            try await sessionStore.save(session)
+            state = .authenticated(userID: session.userID)
         }
 
         return state
