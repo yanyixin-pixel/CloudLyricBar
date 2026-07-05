@@ -33,8 +33,11 @@ enum PlaybackControlServiceTests {
 
         try await service.send(.playPause)
 
+        try await expectEqual(first.canSendCommands(), [.playPause])
         try await expectEqual(first.sentCommands(), [])
+        try await expectEqual(second.canSendCommands(), [.playPause])
         try await expectEqual(second.sentCommands(), [.playPause])
+        try await expectEqual(third.canSendCommands(), [])
         try await expectEqual(third.sentCommands(), [])
     }
 
@@ -113,6 +116,7 @@ enum PlaybackControlServiceTests {
 
 private actor RecordingPlaybackControlStrategy: PlaybackControlStrategy {
     private let canSendResult: Bool
+    private var checkedCommands: [PlaybackCommand] = []
     private var commands: [PlaybackCommand] = []
 
     init(canSendResult: Bool) {
@@ -120,7 +124,8 @@ private actor RecordingPlaybackControlStrategy: PlaybackControlStrategy {
     }
 
     func canSend(_ command: PlaybackCommand) async -> Bool {
-        canSendResult
+        checkedCommands.append(command)
+        return canSendResult
     }
 
     func send(_ command: PlaybackCommand) async throws {
@@ -129,6 +134,10 @@ private actor RecordingPlaybackControlStrategy: PlaybackControlStrategy {
 
     func sentCommands() -> [PlaybackCommand] {
         commands
+    }
+
+    func canSendCommands() -> [PlaybackCommand] {
+        checkedCommands
     }
 }
 
