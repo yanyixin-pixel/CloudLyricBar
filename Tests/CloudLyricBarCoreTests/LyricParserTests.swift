@@ -53,6 +53,7 @@ enum LyricParserTests {
         [inf:01.00]x
         [-01:02.00]x
         [00:60.00]x
+        [1e308:00]x
         [00:03.00]valid
         """
 

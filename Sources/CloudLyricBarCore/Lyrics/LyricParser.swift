@@ -51,6 +51,11 @@ public enum LyricParser {
             return nil
         }
 
-        return minutes * 60 + seconds
+        let total = minutes * 60 + seconds
+        guard total.isFinite else {
+            return nil
+        }
+
+        return total
     }
 }
