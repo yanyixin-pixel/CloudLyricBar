@@ -5,7 +5,7 @@ import Combine
 @MainActor
 final class StatusBarController: NSObject {
     private static let statusItemLength: CGFloat = 340
-    private static let visibleCharacterCount = 32
+    private static let horizontalTextInset: CGFloat = 18
     private static let leadingPauseTicks = 3
     private static let trailingPauseTicks = 3
 
@@ -60,12 +60,26 @@ final class StatusBarController: NSObject {
     }
 
     private func renderTitle() {
-        let frame = marqueeState.frame(
-            visibleCharacterCount: Self.visibleCharacterCount,
+        guard let button = statusItem.button else {
+            return
+        }
+
+        let maxDisplayWidth = max(24, button.bounds.width - Self.horizontalTextInset)
+        let font = button.font ?? NSFont.menuBarFont(ofSize: 0)
+        let frame = marqueeState.pixelFrame(
+            maxDisplayWidth: Double(maxDisplayWidth),
             leadingPauseTicks: Self.leadingPauseTicks,
-            trailingPauseTicks: Self.trailingPauseTicks
+            trailingPauseTicks: Self.trailingPauseTicks,
+            characterWidth: { character in
+                Self.width(of: character, font: font)
+            }
         )
-        statusItem.button?.title = frame.text
-        statusItem.button?.toolTip = marqueeState.title
+        button.title = frame.text
+        button.toolTip = marqueeState.title
+    }
+
+    private static func width(of character: Character, font: NSFont) -> Double {
+        let size = String(character).size(withAttributes: [.font: font])
+        return Double(ceil(size.width))
     }
 }

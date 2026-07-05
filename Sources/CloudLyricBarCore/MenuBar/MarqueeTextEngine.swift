@@ -45,6 +45,22 @@ public struct MarqueeTitleState: Equatable, Sendable {
             trailingPauseTicks: trailingPauseTicks
         )
     }
+
+    public func pixelFrame(
+        maxDisplayWidth: Double,
+        leadingPauseTicks: Int,
+        trailingPauseTicks: Int,
+        characterWidth: (Character) -> Double
+    ) -> MarqueeFrame {
+        MarqueeTextEngine.pixelFrame(
+            text: title,
+            maxDisplayWidth: maxDisplayWidth,
+            tick: tick,
+            leadingPauseTicks: leadingPauseTicks,
+            trailingPauseTicks: trailingPauseTicks,
+            characterWidth: characterWidth
+        )
+    }
 }
 
 public enum MarqueeTextEngine {
@@ -99,6 +115,52 @@ public enum MarqueeTextEngine {
 
         let visibleCharacters = (0..<visibleCharacterCount).map { offset in
             characters[startIndex + offset]
+        }
+
+        return MarqueeFrame(text: String(visibleCharacters), isScrolling: true)
+    }
+
+    public static func pixelFrame(
+        text: String,
+        maxDisplayWidth: Double,
+        tick: Int,
+        leadingPauseTicks: Int,
+        trailingPauseTicks: Int,
+        characterWidth: (Character) -> Double
+    ) -> MarqueeFrame {
+        guard maxDisplayWidth > 0 else {
+            return MarqueeFrame(text: "", isScrolling: false)
+        }
+
+        let characters = Array(text)
+        guard !characters.isEmpty else {
+            return MarqueeFrame(text: "", isScrolling: false)
+        }
+
+        let totalWidth = characters.reduce(0) { total, character in
+            total + max(0, characterWidth(character))
+        }
+        guard totalWidth > maxDisplayWidth else {
+            return MarqueeFrame(text: text, isScrolling: false)
+        }
+
+        let maxStartIndex = max(0, characters.count - 1)
+        let leadingPause = max(0, leadingPauseTicks)
+        let trailingPause = max(0, trailingPauseTicks)
+        let cycleLength = max(1, leadingPause + maxStartIndex + 1 + trailingPause)
+        let phase = normalizedOffset(tick, count: cycleLength)
+        let startIndex = min(maxStartIndex, max(0, phase - leadingPause))
+        var width = 0.0
+        var visibleCharacters: [Character] = []
+
+        for character in characters[startIndex...] {
+            let nextWidth = width + max(0, characterWidth(character))
+            if !visibleCharacters.isEmpty, nextWidth > maxDisplayWidth {
+                break
+            }
+
+            visibleCharacters.append(character)
+            width = nextWidth
         }
 
         return MarqueeFrame(text: String(visibleCharacters), isScrolling: true)

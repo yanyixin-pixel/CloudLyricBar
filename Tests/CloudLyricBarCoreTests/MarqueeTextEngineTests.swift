@@ -24,6 +24,10 @@ let marqueeTextEngineTests: [TestCase] = [
     TestCase(
         name: "MarqueeTextEngineTests.testMarqueeTitleStateDoesNotResetTickForSameTitle",
         run: MarqueeTextEngineTests.testMarqueeTitleStateDoesNotResetTickForSameTitle
+    ),
+    TestCase(
+        name: "MarqueeTextEngineTests.testPixelFrameKeepsWideCharactersInsideDisplayWidth",
+        run: MarqueeTextEngineTests.testPixelFrameKeepsWideCharactersInsideDisplayWidth
     )
 ]
 
@@ -103,5 +107,31 @@ enum MarqueeTextEngineTests {
         )
 
         try expectEqual(frame, MarqueeFrame(text: "bcde", isScrolling: true))
+    }
+
+    static func testPixelFrameKeepsWideCharactersInsideDisplayWidth() throws {
+        let frame = MarqueeTextEngine.pixelFrame(
+            text: "abcd界界",
+            maxDisplayWidth: 3,
+            tick: 3,
+            leadingPauseTicks: 0,
+            trailingPauseTicks: 0,
+            characterWidth: { character in
+                character == "界" ? 2 : 1
+            }
+        )
+        let tailFrame = MarqueeTextEngine.pixelFrame(
+            text: "abcd界界",
+            maxDisplayWidth: 3,
+            tick: 4,
+            leadingPauseTicks: 0,
+            trailingPauseTicks: 0,
+            characterWidth: { character in
+                character == "界" ? 2 : 1
+            }
+        )
+
+        try expectEqual(frame, MarqueeFrame(text: "d界", isScrolling: true))
+        try expectEqual(tailFrame, MarqueeFrame(text: "界", isScrolling: true))
     }
 }
