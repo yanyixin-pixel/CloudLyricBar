@@ -30,6 +30,43 @@ public enum MarqueeTextEngine {
         return MarqueeFrame(text: String(visibleCharacters), isScrolling: true)
     }
 
+    public static func pausedFrame(
+        text: String,
+        visibleCharacterCount: Int,
+        tick: Int,
+        leadingPauseTicks: Int,
+        trailingPauseTicks: Int
+    ) -> MarqueeFrame {
+        guard visibleCharacterCount > 0 else {
+            return MarqueeFrame(text: "", isScrolling: false)
+        }
+
+        let characters = Array(text)
+        guard characters.count > visibleCharacterCount else {
+            return MarqueeFrame(text: text, isScrolling: false)
+        }
+
+        let maxOffset = characters.count - visibleCharacterCount
+        let leadingPause = max(0, leadingPauseTicks)
+        let trailingPause = max(0, trailingPauseTicks)
+        let cycleLength = max(1, leadingPause + maxOffset + trailingPause)
+        let phase = normalizedOffset(tick, count: cycleLength)
+        let startIndex: Int
+
+        if phase < leadingPause {
+            startIndex = 0
+        } else {
+            let shifted = phase - leadingPause + 1
+            startIndex = min(maxOffset, shifted)
+        }
+
+        let visibleCharacters = (0..<visibleCharacterCount).map { offset in
+            characters[startIndex + offset]
+        }
+
+        return MarqueeFrame(text: String(visibleCharacters), isScrolling: true)
+    }
+
     private static func normalizedOffset(_ tick: Int, count: Int) -> Int {
         let offset = tick % count
         return offset >= 0 ? offset : offset + count

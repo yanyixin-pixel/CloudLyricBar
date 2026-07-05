@@ -4,7 +4,10 @@ import Combine
 
 @MainActor
 final class StatusBarController: NSObject {
-    private static let visibleCharacterCount = 22
+    private static let statusItemLength: CGFloat = 340
+    private static let visibleCharacterCount = 32
+    private static let leadingPauseTicks = 6
+    private static let trailingPauseTicks = 5
 
     private let statusItem: NSStatusItem
     private let popoverController: PopoverController
@@ -13,7 +16,7 @@ final class StatusBarController: NSObject {
     private var marqueeTick = 0
 
     init(viewModel: CloudLyricBarViewModel, popoverController: PopoverController) {
-        statusItem = NSStatusBar.system.statusItem(withLength: 220)
+        statusItem = NSStatusBar.system.statusItem(withLength: Self.statusItemLength)
         self.popoverController = popoverController
         super.init()
 
@@ -34,7 +37,7 @@ final class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
 
-        Timer.publish(every: 0.35, on: .main, in: .common)
+        Timer.publish(every: 0.45, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 self?.advanceMarquee()
@@ -59,10 +62,12 @@ final class StatusBarController: NSObject {
     }
 
     private func renderTitle() {
-        let frame = MarqueeTextEngine.frame(
+        let frame = MarqueeTextEngine.pausedFrame(
             text: fullTitle,
             visibleCharacterCount: Self.visibleCharacterCount,
-            tick: marqueeTick
+            tick: marqueeTick,
+            leadingPauseTicks: Self.leadingPauseTicks,
+            trailingPauseTicks: Self.trailingPauseTicks
         )
         statusItem.button?.title = frame.text
         statusItem.button?.toolTip = fullTitle

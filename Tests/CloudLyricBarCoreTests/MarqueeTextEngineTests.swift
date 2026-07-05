@@ -16,6 +16,10 @@ let marqueeTextEngineTests: [TestCase] = [
     TestCase(
         name: "MarqueeTextEngineTests.testZeroVisibleCharacterCountReturnsEmptyFrame",
         run: MarqueeTextEngineTests.testZeroVisibleCharacterCountReturnsEmptyFrame
+    ),
+    TestCase(
+        name: "MarqueeTextEngineTests.testLongTextWithPausesHoldsAtStartAndEnd",
+        run: MarqueeTextEngineTests.testLongTextWithPausesHoldsAtStartAndEnd
     )
 ]
 
@@ -43,5 +47,41 @@ enum MarqueeTextEngineTests {
         let frame = MarqueeTextEngine.frame(text: "abcdef", visibleCharacterCount: 0, tick: 2)
 
         try expectEqual(frame, MarqueeFrame(text: "", isScrolling: false))
+    }
+
+    static func testLongTextWithPausesHoldsAtStartAndEnd() throws {
+        let start = MarqueeTextEngine.pausedFrame(
+            text: "abcdefghij",
+            visibleCharacterCount: 4,
+            tick: 1,
+            leadingPauseTicks: 2,
+            trailingPauseTicks: 2
+        )
+        let moving = MarqueeTextEngine.pausedFrame(
+            text: "abcdefghij",
+            visibleCharacterCount: 4,
+            tick: 2,
+            leadingPauseTicks: 2,
+            trailingPauseTicks: 2
+        )
+        let end = MarqueeTextEngine.pausedFrame(
+            text: "abcdefghij",
+            visibleCharacterCount: 4,
+            tick: 8,
+            leadingPauseTicks: 2,
+            trailingPauseTicks: 2
+        )
+        let wrapped = MarqueeTextEngine.pausedFrame(
+            text: "abcdefghij",
+            visibleCharacterCount: 4,
+            tick: 10,
+            leadingPauseTicks: 2,
+            trailingPauseTicks: 2
+        )
+
+        try expectEqual(start, MarqueeFrame(text: "abcd", isScrolling: true))
+        try expectEqual(moving, MarqueeFrame(text: "bcde", isScrolling: true))
+        try expectEqual(end, MarqueeFrame(text: "ghij", isScrolling: true))
+        try expectEqual(wrapped, MarqueeFrame(text: "abcd", isScrolling: true))
     }
 }
