@@ -23,6 +23,14 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testSelectingSongSendsOpenSongCommand
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testSelectingSongUpdatesCurrentSongAndLyrics",
+        run: CloudLyricBarViewModelTests.testSelectingSongUpdatesCurrentSongAndLyrics
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics",
+        run: CloudLyricBarViewModelTests.testRefreshEstimatedPlaybackAdvancesLyrics
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage",
         run: CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage
     )
@@ -105,6 +113,42 @@ enum CloudLyricBarViewModelTests {
 
         try await expectEqual(playback.commands, [.openSong(id: "1901371647")])
         try await expectEqual(model.message, nil)
+    }
+
+    static func testSelectingSongUpdatesCurrentSongAndLyrics() async throws {
+        let playback = RecordingPlaybackControl()
+        let api = FakeNetEaseAPIClient(lines: [
+            LyricLine(startTime: 0, text: "开头一句"),
+            LyricLine(startTime: 8, text: "下一句")
+        ])
+        let model = await CloudLyricBarViewModel(apiClient: api, playbackControl: playback)
+        let song = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+
+        await model.play(song)
+
+        try await expectEqual(model.currentSong, song)
+        try await expectEqual(model.playback, .playing)
+        try await expectEqual(model.menuBarTitle, "♪ 开头一句")
+        try await expectEqual(model.lyricContext.current?.text, "开头一句")
+    }
+
+    static func testRefreshEstimatedPlaybackAdvancesLyrics() async throws {
+        let api = FakeNetEaseAPIClient(lines: [
+            LyricLine(startTime: 0, text: "开头一句"),
+            LyricLine(startTime: 8, text: "下一句")
+        ])
+        let model = await CloudLyricBarViewModel(apiClient: api)
+        let start = Date(timeIntervalSince1970: 100)
+        let song = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 0, capturedAt: start),
+            isClientRunning: true
+        )
+        await model.refreshEstimatedPlayback(at: Date(timeIntervalSince1970: 109))
+
+        try await expectEqual(model.menuBarTitle, "♪ 下一句")
+        try await expectEqual(model.lyricContext.current?.text, "下一句")
     }
 
     static func testPlaybackCommandFailureShowsMessage() async throws {

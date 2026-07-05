@@ -14,6 +14,8 @@ public final class CloudLyricBarViewModel: ObservableObject {
     private let apiClient: any NetEaseAPIClient
     private let playbackControl: (any PlaybackControlling)?
     private var cachedLyrics: [String: [LyricLine]] = [:]
+    private var latestNowPlaying: NowPlayingSnapshot?
+    private var latestClientRunning = false
 
     public init(apiClient: any NetEaseAPIClient, playbackControl: (any PlaybackControlling)? = nil) {
         self.apiClient = apiClient
@@ -21,6 +23,8 @@ public final class CloudLyricBarViewModel: ObservableObject {
     }
 
     public func apply(nowPlaying: NowPlayingSnapshot, isClientRunning: Bool) async {
+        latestNowPlaying = nowPlaying
+        latestClientRunning = isClientRunning
         currentSong = nowPlaying.song
         playback = nowPlaying.playback
 
@@ -71,10 +75,21 @@ public final class CloudLyricBarViewModel: ObservableObject {
     public func play(_ song: Song) async {
         do {
             try await playbackControl?.send(.openSong(id: song.id))
+            await apply(
+                nowPlaying: NowPlayingSnapshot(song: song, playback: .playing, position: 0),
+                isClientRunning: true
+            )
             message = nil
         } catch {
             message = "无法让网易云播放这首歌"
         }
+    }
+
+    public func refreshEstimatedPlayback(at date: Date = Date()) async {
+        guard let latestNowPlaying else { return }
+
+        let estimated = TimerPositionEstimator.estimate(from: latestNowPlaying, at: date)
+        await apply(nowPlaying: estimated, isClientRunning: latestClientRunning)
     }
 
     public func sendPlaybackCommand(_ command: PlaybackCommand) async {
