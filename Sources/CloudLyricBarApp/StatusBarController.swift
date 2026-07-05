@@ -6,8 +6,8 @@ import Combine
 final class StatusBarController: NSObject {
     private static let statusItemLength: CGFloat = 340
     private static let horizontalTextInset: CGFloat = 18
-    private static let leadingPauseTicks = 3
-    private static let trailingPauseTicks = 3
+    private static let leadingPauseTicks = 1
+    private static let trailingPauseTicks = 0
 
     private let statusItem: NSStatusItem
     private let popoverController: PopoverController
@@ -36,7 +36,7 @@ final class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
 
-        Timer.publish(every: 0.45, on: .main, in: .common)
+        Timer.publish(every: 0.18, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 self?.advanceMarquee()

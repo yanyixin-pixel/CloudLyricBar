@@ -144,16 +144,17 @@ public enum MarqueeTextEngine {
             return MarqueeFrame(text: text, isScrolling: false)
         }
 
-        let maxStartIndex = max(0, characters.count - 1)
         let leadingPause = max(0, leadingPauseTicks)
-        let trailingPause = max(0, trailingPauseTicks)
-        let cycleLength = max(1, leadingPause + maxStartIndex + 1 + trailingPause)
+        let spacer = Array("      ")
+        let scrollingCharacters = characters + spacer
+        let cycleLength = max(1, leadingPause + scrollingCharacters.count)
         let phase = normalizedOffset(tick, count: cycleLength)
-        let startIndex = min(maxStartIndex, max(0, phase - leadingPause))
+        let startIndex = phase < leadingPause ? 0 : phase - leadingPause
         var width = 0.0
         var visibleCharacters: [Character] = []
 
-        for character in characters[startIndex...] {
+        for offset in 0..<scrollingCharacters.count {
+            let character = scrollingCharacters[(startIndex + offset) % scrollingCharacters.count]
             let nextWidth = width + max(0, characterWidth(character))
             if !visibleCharacters.isEmpty, nextWidth > maxDisplayWidth {
                 break

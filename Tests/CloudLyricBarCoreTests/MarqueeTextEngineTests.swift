@@ -28,6 +28,10 @@ let marqueeTextEngineTests: [TestCase] = [
     TestCase(
         name: "MarqueeTextEngineTests.testPixelFrameKeepsWideCharactersInsideDisplayWidth",
         run: MarqueeTextEngineTests.testPixelFrameKeepsWideCharactersInsideDisplayWidth
+    ),
+    TestCase(
+        name: "MarqueeTextEngineTests.testPixelFrameWrapsLongTextWithSpacer",
+        run: MarqueeTextEngineTests.testPixelFrameWrapsLongTextWithSpacer
     )
 ]
 
@@ -133,5 +137,28 @@ enum MarqueeTextEngineTests {
 
         try expectEqual(frame, MarqueeFrame(text: "d界", isScrolling: true))
         try expectEqual(tailFrame, MarqueeFrame(text: "界", isScrolling: true))
+    }
+
+    static func testPixelFrameWrapsLongTextWithSpacer() throws {
+        let text = "abcdef"
+        let frame = MarqueeTextEngine.pixelFrame(
+            text: text,
+            maxDisplayWidth: 4,
+            tick: 8,
+            leadingPauseTicks: 0,
+            trailingPauseTicks: 0,
+            characterWidth: { _ in 1 }
+        )
+        let wrapped = MarqueeTextEngine.pixelFrame(
+            text: text,
+            maxDisplayWidth: 4,
+            tick: 12,
+            leadingPauseTicks: 0,
+            trailingPauseTicks: 0,
+            characterWidth: { _ in 1 }
+        )
+
+        try expectEqual(frame, MarqueeFrame(text: "    ", isScrolling: true))
+        try expectEqual(wrapped, MarqueeFrame(text: "abcd", isScrolling: true))
     }
 }
