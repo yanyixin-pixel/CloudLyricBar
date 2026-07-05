@@ -17,7 +17,11 @@ public protocol PlaybackControlStrategy: Sendable {
     func send(_ command: PlaybackCommand) async throws
 }
 
-public actor PlaybackControlService {
+public protocol PlaybackControlling: Sendable {
+    func send(_ command: PlaybackCommand) async throws
+}
+
+public actor PlaybackControlService: PlaybackControlling {
     private let strategies: [any PlaybackControlStrategy]
     private var tail: Task<Void, Never>?
 

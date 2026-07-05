@@ -7,7 +7,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let api = URLSessionNetEaseAPIClient(baseURL: URL(string: "http://localhost:3000")!)
-        let viewModel = CloudLyricBarViewModel(apiClient: api)
+        let permissionCoordinator = PermissionCoordinator(accessibilityProbe: MacAccessibilityPermissionProbe())
+        let playback = PlaybackControlService(strategies: [
+            NetEaseDeepLinkStrategy { url in
+                NSWorkspace.shared.open(url)
+            },
+            AccessibilityPlaybackStrategy(permissionCoordinator: permissionCoordinator)
+        ])
+        let viewModel = CloudLyricBarViewModel(apiClient: api, playbackControl: playback)
         let popoverController = PopoverController(viewModel: viewModel)
         statusBarController = StatusBarController(viewModel: viewModel, popoverController: popoverController)
     }

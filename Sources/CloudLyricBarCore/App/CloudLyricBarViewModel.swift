@@ -12,10 +12,12 @@ public final class CloudLyricBarViewModel: ObservableObject {
     @Published public private(set) var message: String?
 
     private let apiClient: any NetEaseAPIClient
+    private let playbackControl: (any PlaybackControlling)?
     private var cachedLyrics: [String: [LyricLine]] = [:]
 
-    public init(apiClient: any NetEaseAPIClient) {
+    public init(apiClient: any NetEaseAPIClient, playbackControl: (any PlaybackControlling)? = nil) {
         self.apiClient = apiClient
+        self.playbackControl = playbackControl
     }
 
     public func apply(nowPlaying: NowPlayingSnapshot, isClientRunning: Bool) async {
@@ -63,6 +65,24 @@ public final class CloudLyricBarViewModel: ObservableObject {
             message = nil
         } catch {
             message = "搜索失败"
+        }
+    }
+
+    public func play(_ song: Song) async {
+        do {
+            try await playbackControl?.send(.openSong(id: song.id))
+            message = nil
+        } catch {
+            message = "无法让网易云播放这首歌"
+        }
+    }
+
+    public func sendPlaybackCommand(_ command: PlaybackCommand) async {
+        do {
+            try await playbackControl?.send(command)
+            message = nil
+        } catch {
+            message = "播放控制失败"
         }
     }
 

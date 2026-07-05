@@ -17,6 +17,14 @@ let cloudLyricBarViewModelTests: [TestCase] = [
     TestCase(
         name: "CloudLyricBarViewModelTests.testLoadPlaylistsUpdatesState",
         run: CloudLyricBarViewModelTests.testLoadPlaylistsUpdatesState
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testSelectingSongSendsOpenSongCommand",
+        run: CloudLyricBarViewModelTests.testSelectingSongSendsOpenSongCommand
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage",
+        run: CloudLyricBarViewModelTests.testPlaybackCommandFailureShowsMessage
     )
 ]
 
@@ -87,6 +95,27 @@ enum CloudLyricBarViewModelTests {
             Playlist(id: "123", name: "我喜欢的音乐", trackCount: 88)
         ])
     }
+
+    static func testSelectingSongSendsOpenSongCommand() async throws {
+        let playback = RecordingPlaybackControl()
+        let model = await CloudLyricBarViewModel(apiClient: FakeNetEaseAPIClient(), playbackControl: playback)
+        let song = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+
+        await model.play(song)
+
+        try await expectEqual(playback.commands, [.openSong(id: "1901371647")])
+        try await expectEqual(model.message, nil)
+    }
+
+    static func testPlaybackCommandFailureShowsMessage() async throws {
+        let playback = RecordingPlaybackControl(error: PlaybackControlError.noAvailableStrategy)
+        let model = await CloudLyricBarViewModel(apiClient: FakeNetEaseAPIClient(), playbackControl: playback)
+
+        await model.sendPlaybackCommand(.next)
+
+        try await expectEqual(playback.commands, [.next])
+        try await expectEqual(model.message, "播放控制失败")
+    }
 }
 
 private actor FakeNetEaseAPIClient: NetEaseAPIClient {
@@ -118,5 +147,21 @@ private actor FakeNetEaseAPIClient: NetEaseAPIClient {
     func fetchLyrics(songID: String) async throws -> [LyricLine] {
         fetchLyricsCallCount += 1
         return linesValue
+    }
+}
+
+private actor RecordingPlaybackControl: PlaybackControlling {
+    private(set) var commands: [PlaybackCommand] = []
+    private let error: Error?
+
+    init(error: Error? = nil) {
+        self.error = error
+    }
+
+    func send(_ command: PlaybackCommand) async throws {
+        commands.append(command)
+        if let error {
+            throw error
+        }
     }
 }

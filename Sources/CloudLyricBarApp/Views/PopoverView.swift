@@ -39,13 +39,13 @@ struct PopoverView: View {
 
     private var playbackControls: some View {
         HStack {
-            Button(action: {}) {
+            Button(action: { Task { await viewModel.sendPlaybackCommand(.previous) } }) {
                 Image(systemName: "backward.fill")
             }
-            Button(action: {}) {
+            Button(action: { Task { await viewModel.sendPlaybackCommand(.playPause) } }) {
                 Image(systemName: viewModel.playback == .playing ? "pause.fill" : "play.fill")
             }
-            Button(action: {}) {
+            Button(action: { Task { await viewModel.sendPlaybackCommand(.next) } }) {
                 Image(systemName: "forward.fill")
             }
         }
@@ -80,13 +80,16 @@ struct PopoverView: View {
         List {
             Section("搜索结果") {
                 ForEach(viewModel.searchResults) { song in
-                    VStack(alignment: .leading) {
-                        Text(song.title).lineLimit(1)
-                        Text(song.artist)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                    Button(action: { Task { await viewModel.play(song) } }) {
+                        VStack(alignment: .leading) {
+                            Text(song.title).lineLimit(1)
+                            Text(song.artist)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
             }
 
