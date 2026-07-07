@@ -40,7 +40,7 @@ JS
 fi
 
 echo "Building CloudLyricBar..."
-swift build -c release --product CloudLyricBarApp
+swift build --disable-sandbox -c release --product CloudLyricBarApp
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"

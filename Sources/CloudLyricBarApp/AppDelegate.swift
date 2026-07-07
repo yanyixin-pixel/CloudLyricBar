@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let api = URLSessionNetEaseAPIClient(baseURL: apiBaseURL)
         let permissionCoordinator = PermissionCoordinator(accessibilityProbe: MacAccessibilityPermissionProbe())
         let playback = PlaybackControlService(strategies: [
+            MediaRemotePlaybackStrategy(),
             NetEaseDeepLinkStrategy { url in
                 NSWorkspace.shared.open(url)
             },
