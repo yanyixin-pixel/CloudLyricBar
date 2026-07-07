@@ -47,6 +47,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$ROOT_DIR/.build/release/CloudLyricBarApp" "$MACOS_DIR/$APP_NAME"
 cp -R "$NODE_DIR" "$RESOURCES_DIR/node"
 cp -R "$API_DIR" "$RESOURCES_DIR/NeteaseCloudMusicApi"
+cp "$ROOT_DIR/Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -59,6 +60,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>local.cloudlyricbar.app</string>
   <key>CFBundleName</key>
   <string>$APP_NAME</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
