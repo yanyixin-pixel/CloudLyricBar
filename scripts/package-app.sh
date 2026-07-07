@@ -79,4 +79,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 PLIST
 
 touch "$APP_DIR"
+xattr -cr "$APP_DIR"
+codesign --force --deep --sign - "$APP_DIR"
+codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 echo "Packaged: $APP_DIR"
