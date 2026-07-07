@@ -20,6 +20,7 @@ public final class CloudLyricBarViewModel: ObservableObject {
     private var resolvedExternalSongs: [ExternalSongKey: Song] = [:]
     private var latestNowPlaying: NowPlayingSnapshot?
     private var latestClientRunning = false
+    private var applyRevision = 0
 
     public init(
         apiClient: any NetEaseAPIClient,
@@ -36,6 +37,8 @@ public final class CloudLyricBarViewModel: ObservableObject {
     }
 
     public func apply(nowPlaying: NowPlayingSnapshot, isClientRunning: Bool) async {
+        applyRevision += 1
+        let revision = applyRevision
         latestNowPlaying = nowPlaying
         latestClientRunning = isClientRunning
         playback = nowPlaying.playback
@@ -57,10 +60,13 @@ public final class CloudLyricBarViewModel: ObservableObject {
         if let song = nowPlaying.song {
             do {
                 let lyricSong = try await lyricSource(for: song)
+                guard isCurrentApply(revision) else { return }
                 displaySong = songWithPreferredArtwork(lyricSong, fallbackArtworkURL: song.artworkURL)
                 lines = try await lyrics(for: lyricSong.id)
+                guard isCurrentApply(revision) else { return }
                 message = nil
             } catch {
+                guard isCurrentApply(revision) else { return }
                 message = "歌词加载失败"
             }
         }
@@ -183,6 +189,10 @@ public final class CloudLyricBarViewModel: ObservableObject {
         }
     }
 
+    private func isCurrentApply(_ revision: Int) -> Bool {
+        revision == applyRevision
+    }
+
     private func cachedLyricSource(for song: Song) -> Song? {
         guard song.id.hasPrefix("external:") else {
             return song
@@ -192,7 +202,7 @@ public final class CloudLyricBarViewModel: ObservableObject {
     }
 
     private func songWithPreferredArtwork(_ song: Song, fallbackArtworkURL: URL?) -> Song {
-        guard song.artworkURL == nil, let fallbackArtworkURL else {
+        guard let fallbackArtworkURL, song.artworkURL != fallbackArtworkURL else {
             return song
         }
 

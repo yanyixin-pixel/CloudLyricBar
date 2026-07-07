@@ -44,6 +44,14 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testExternalNowPlayingKeepsArtworkWhenResolvedSongHasNoArtwork
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testExternalNowPlayingPrefersLocalArtworkOverResolvedArtwork",
+        run: CloudLyricBarViewModelTests.testExternalNowPlayingPrefersLocalArtworkOverResolvedArtwork
+    ),
+    TestCase(
+        name: "CloudLyricBarViewModelTests.testStaleLyricLookupDoesNotOverwriteCurrentSong",
+        run: CloudLyricBarViewModelTests.testStaleLyricLookupDoesNotOverwriteCurrentSong
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes",
         run: CloudLyricBarViewModelTests.testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes
     ),
@@ -284,6 +292,76 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(model.currentSong?.artworkURL, artworkURL)
     }
 
+    static func testExternalNowPlayingPrefersLocalArtworkOverResolvedArtwork() async throws {
+        let localArtworkURL = URL(fileURLWithPath: "/tmp/cloudlyricbar-local-cover.png")
+        let remoteArtworkURL = URL(string: "https://music.example/remote-cover.jpg")!
+        let externalSong = Song(
+            id: "external:mediaremote:一路向北:周杰伦",
+            title: "一路向北",
+            artist: "周杰伦",
+            artworkURL: localArtworkURL
+        )
+        let resolvedSong = Song(
+            id: "1901371647",
+            title: "一路向北",
+            artist: "周杰伦",
+            artworkURL: remoteArtworkURL
+        )
+        let api = FakeNetEaseAPIClient(
+            searchResults: [resolvedSong],
+            lines: [
+                LyricLine(startTime: 0, text: "匹配后的歌词")
+            ]
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api)
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: externalSong, playback: .playing, position: 0),
+            isClientRunning: true
+        )
+
+        try await expectEqual(model.currentSong?.artworkURL, localArtworkURL)
+    }
+
+    static func testStaleLyricLookupDoesNotOverwriteCurrentSong() async throws {
+        let oldExternalSong = Song(
+            id: "external:mediaremote:旧歌:旧歌手",
+            title: "旧歌",
+            artist: "旧歌手",
+            artworkURL: URL(fileURLWithPath: "/tmp/old-cover.png")
+        )
+        let newExternalSong = Song(
+            id: "external:mediaremote:新歌:新歌手",
+            title: "新歌",
+            artist: "新歌手",
+            artworkURL: URL(fileURLWithPath: "/tmp/new-cover.png")
+        )
+        let api = RacingNetEaseAPIClient()
+        let model = await CloudLyricBarViewModel(apiClient: api)
+
+        let staleTask = Task {
+            await model.apply(
+                nowPlaying: NowPlayingSnapshot(song: oldExternalSong, playback: .playing, position: 0),
+                isClientRunning: true
+            )
+        }
+
+        try await api.waitUntilOldSearchStarted()
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: newExternalSong, playback: .playing, position: 0),
+            isClientRunning: true
+        )
+        await api.releaseOldSearch()
+        await staleTask.value
+
+        try await expectEqual(model.currentSong?.title, "新歌")
+        try await expectEqual(model.currentSong?.artist, "新歌手")
+        try await expectEqual(model.currentSong?.artworkURL, URL(fileURLWithPath: "/tmp/new-cover.png"))
+        try await expectEqual(model.lyricContext.current?.text, "新歌歌词")
+        try await expectEqual(model.menuBarTitle, "♪ 新歌歌词")
+    }
+
     static func testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes() async throws {
         let externalSong = Song(id: "external:mediaremote:一路向北:周杰伦", title: "一路向北", artist: "周杰伦")
         let api = BlockingNetEaseAPIClient()
@@ -514,6 +592,57 @@ private actor BlockingNetEaseAPIClient: NetEaseAPIClient {
     func releaseSearch() {
         releaseContinuation?.resume()
         releaseContinuation = nil
+    }
+}
+
+private actor RacingNetEaseAPIClient: NetEaseAPIClient {
+    private var oldSearchStartedContinuation: CheckedContinuation<Void, Never>?
+    private var releaseOldSearchContinuation: CheckedContinuation<Void, Never>?
+    private var didStartOldSearch = false
+
+    func userPlaylists(userID: String) async throws -> [Playlist] {
+        []
+    }
+
+    func searchSongs(keyword: String) async throws -> [Song] {
+        if keyword.contains("旧歌") {
+            didStartOldSearch = true
+            oldSearchStartedContinuation?.resume()
+            oldSearchStartedContinuation = nil
+            await withCheckedContinuation { continuation in
+                releaseOldSearchContinuation = continuation
+            }
+            return [Song(id: "old-song", title: "旧歌", artist: "旧歌手")]
+        }
+
+        return [Song(id: "new-song", title: "新歌", artist: "新歌手")]
+    }
+
+    func fetchLyrics(songID: String) async throws -> [LyricLine] {
+        if songID == "old-song" {
+            return [LyricLine(startTime: 0, text: "旧歌歌词")]
+        }
+
+        return [LyricLine(startTime: 0, text: "新歌歌词")]
+    }
+
+    func fetchSongStreamURL(songID: String) async throws -> URL {
+        URL(string: "https://music.example/default.mp3")!
+    }
+
+    func waitUntilOldSearchStarted() async throws {
+        if didStartOldSearch {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            oldSearchStartedContinuation = continuation
+        }
+    }
+
+    func releaseOldSearch() {
+        releaseOldSearchContinuation?.resume()
+        releaseOldSearchContinuation = nil
     }
 }
 
