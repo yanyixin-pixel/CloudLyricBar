@@ -23,10 +23,7 @@ struct PopoverView: View {
 
     private var currentSongHeader: some View {
         HStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.secondary.opacity(0.18))
-                .frame(width: 48, height: 48)
-                .overlay(Image(systemName: "music.note").foregroundStyle(.secondary))
+            artworkView
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.currentSong?.title ?? "未播放")
@@ -42,6 +39,32 @@ struct PopoverView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: 52)
+    }
+
+    private var artworkView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.secondary.opacity(0.18))
+
+            if let artworkURL = viewModel.currentSong?.artworkURL {
+                AsyncImage(url: artworkURL) { phase in
+                    switch phase {
+                    case let .success(image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        Image(systemName: "music.note")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Image(systemName: "music.note")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 48, height: 48)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
     private var playbackControls: some View {

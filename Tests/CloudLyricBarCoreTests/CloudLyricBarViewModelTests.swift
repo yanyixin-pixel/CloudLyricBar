@@ -40,6 +40,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testExternalNowPlayingSongSearchesNetEaseAndUsesResolvedLyrics
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testExternalNowPlayingKeepsArtworkWhenResolvedSongHasNoArtwork",
+        run: CloudLyricBarViewModelTests.testExternalNowPlayingKeepsArtworkWhenResolvedSongHasNoArtwork
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes",
         run: CloudLyricBarViewModelTests.testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes
     ),
@@ -253,6 +257,31 @@ enum CloudLyricBarViewModelTests {
         try await expectEqual(model.currentSong, resolvedSong)
         try await expectEqual(model.lyricContext.current?.text, "匹配后的歌词")
         try await expectEqual(model.menuBarTitle, "♪ 匹配后的歌词")
+    }
+
+    static func testExternalNowPlayingKeepsArtworkWhenResolvedSongHasNoArtwork() async throws {
+        let artworkURL = URL(fileURLWithPath: "/tmp/cloudlyricbar-cover.png")
+        let externalSong = Song(
+            id: "external:mediaremote:一路向北:周杰伦",
+            title: "一路向北",
+            artist: "周杰伦",
+            artworkURL: artworkURL
+        )
+        let resolvedSong = Song(id: "1901371647", title: "一路向北", artist: "周杰伦")
+        let api = FakeNetEaseAPIClient(
+            searchResults: [resolvedSong],
+            lines: [
+                LyricLine(startTime: 0, text: "匹配后的歌词")
+            ]
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api)
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: externalSong, playback: .playing, position: 0),
+            isClientRunning: true
+        )
+
+        try await expectEqual(model.currentSong?.artworkURL, artworkURL)
     }
 
     static func testExternalNowPlayingShowsTitleBeforeLyricLookupFinishes() async throws {

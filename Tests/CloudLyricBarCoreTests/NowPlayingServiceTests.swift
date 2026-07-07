@@ -29,6 +29,10 @@ let nowPlayingServiceTests: [TestCase] = [
     TestCase(
         name: "NowPlayingServiceTests.testExternalNowPlayingPayloadAdvancesElapsedTimeFromTimestamp",
         run: NowPlayingServiceTests.testExternalNowPlayingPayloadAdvancesElapsedTimeFromTimestamp
+    ),
+    TestCase(
+        name: "NowPlayingServiceTests.testExternalNowPlayingPayloadKeepsArtworkURL",
+        run: NowPlayingServiceTests.testExternalNowPlayingPayloadKeepsArtworkURL
     )
 ]
 
@@ -156,6 +160,20 @@ enum NowPlayingServiceTests {
         try expectEqual(snapshot.playback, .playing)
         try expectEqual(snapshot.position, 23.25)
         try expectEqual(snapshot.capturedAt, Date(timeIntervalSince1970: 103.25))
+    }
+
+    static func testExternalNowPlayingPayloadKeepsArtworkURL() throws {
+        let artworkURL = URL(fileURLWithPath: "/tmp/cloudlyricbar-artwork.png")
+        let snapshot = ExternalNowPlayingPayload(
+            title: "一路向北",
+            artist: "周杰伦",
+            elapsedTime: 20,
+            playbackRate: 1,
+            timestamp: nil,
+            artworkURL: artworkURL
+        ).snapshot()
+
+        try expectEqual(snapshot.song?.artworkURL, artworkURL)
     }
 
     private static let sampleSong = Song(

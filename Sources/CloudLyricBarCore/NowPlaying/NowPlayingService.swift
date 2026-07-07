@@ -10,19 +10,22 @@ public struct ExternalNowPlayingPayload: Equatable, Sendable {
     public let elapsedTime: TimeInterval?
     public let playbackRate: Double
     public let timestamp: Date?
+    public let artworkURL: URL?
 
     public init(
         title: String,
         artist: String,
         elapsedTime: TimeInterval?,
         playbackRate: Double,
-        timestamp: Date?
+        timestamp: Date?,
+        artworkURL: URL? = nil
     ) {
         self.title = title
         self.artist = artist
         self.elapsedTime = elapsedTime
         self.playbackRate = playbackRate
         self.timestamp = timestamp
+        self.artworkURL = artworkURL
     }
 
     public func snapshot(at date: Date = Date()) -> NowPlayingSnapshot {
@@ -37,7 +40,8 @@ public struct ExternalNowPlayingPayload: Equatable, Sendable {
         let song = Song(
             id: "external:mediaremote:\(trimmedTitle):\(trimmedArtist)",
             title: trimmedTitle,
-            artist: trimmedArtist
+            artist: trimmedArtist,
+            artworkURL: artworkURL
         )
 
         return NowPlayingSnapshot(song: song, playback: playback, position: position, capturedAt: date)

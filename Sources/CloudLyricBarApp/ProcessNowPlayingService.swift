@@ -73,9 +73,37 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
             }
 
             lock.lock()
-            latestSnapshot = snapshot
+            latestSnapshot = Self.snapshot(snapshot, keepingArtworkFrom: latestSnapshot)
             lock.unlock()
         }
+    }
+
+    private static func snapshot(
+        _ snapshot: NowPlayingSnapshot,
+        keepingArtworkFrom previousSnapshot: NowPlayingSnapshot
+    ) -> NowPlayingSnapshot {
+        guard let song = snapshot.song,
+              song.artworkURL == nil,
+              let previousSong = previousSnapshot.song,
+              previousSong.title == song.title,
+              previousSong.artist == song.artist,
+              let artworkURL = previousSong.artworkURL
+        else {
+            return snapshot
+        }
+
+        return NowPlayingSnapshot(
+            song: Song(
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                album: song.album,
+                artworkURL: artworkURL
+            ),
+            playback: snapshot.playback,
+            position: snapshot.position,
+            capturedAt: snapshot.capturedAt
+        )
     }
 
     private static func decode(_ line: String) -> NowPlayingSnapshot? {
@@ -93,14 +121,55 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
         let position = object["position"] as? TimeInterval
         let rate = object["playbackRate"] as? Double ?? 0
         let timestamp = (object["timestamp"] as? TimeInterval).map(Date.init(timeIntervalSince1970:))
+        let artworkURL = (object["artworkData"] as? String).flatMap(Self.persistArtwork(base64:))
 
         return ExternalNowPlayingPayload(
             title: title,
             artist: artist,
             elapsedTime: position,
             playbackRate: rate,
-            timestamp: timestamp
+            timestamp: timestamp,
+            artworkURL: artworkURL
         ).snapshot()
+    }
+
+    private static func persistArtwork(base64: String) -> URL? {
+        guard let data = Data(base64Encoded: base64), !data.isEmpty else {
+            return nil
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CloudLyricBarArtwork", isDirectory: true)
+        let fileURL = directory
+            .appendingPathComponent(Self.stableHash(for: base64))
+            .appendingPathExtension(Self.imageExtension(for: data))
+
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            if !FileManager.default.fileExists(atPath: fileURL.path) {
+                try data.write(to: fileURL, options: .atomic)
+            }
+            return fileURL
+        } catch {
+            return nil
+        }
+    }
+
+    private static func stableHash(for text: String) -> String {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in text.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        return String(hash, radix: 16)
+    }
+
+    private static func imageExtension(for data: Data) -> String {
+        if data.starts(with: [0xFF, 0xD8, 0xFF]) {
+            return "jpg"
+        }
+
+        return "png"
     }
 
     private var probeScript: String {
@@ -111,6 +180,8 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
         typealias Callback = @convention(block) (CFDictionary?) -> Void
         typealias Function = @convention(c) (DispatchQueue, @escaping Callback) -> Void
 
+        var lastArtworkSignature = ""
+
         func emit(_ info: CFDictionary?) {
             var payload: [String: Any] = [:]
             if let info {
@@ -119,6 +190,13 @@ final class ProcessNowPlayingService: NowPlayingProviding, @unchecked Sendable {
                 payload["artist"] = dictionary["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
                 payload["position"] = dictionary["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? Double ?? 0
                 payload["playbackRate"] = dictionary["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
+                if let artworkData = dictionary["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
+                    let signature = "\\(artworkData.count)-\\(artworkData.hashValue)"
+                    if signature != lastArtworkSignature {
+                        payload["artworkData"] = artworkData.base64EncodedString()
+                        lastArtworkSignature = signature
+                    }
+                }
                 if let timestamp = dictionary["kMRMediaRemoteNowPlayingInfoTimestamp"] as? Date {
                     payload["timestamp"] = timestamp.timeIntervalSince1970
                 }

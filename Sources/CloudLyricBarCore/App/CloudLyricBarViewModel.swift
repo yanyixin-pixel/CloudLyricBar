@@ -57,7 +57,7 @@ public final class CloudLyricBarViewModel: ObservableObject {
         if let song = nowPlaying.song {
             do {
                 let lyricSong = try await lyricSource(for: song)
-                displaySong = lyricSong
+                displaySong = songWithPreferredArtwork(lyricSong, fallbackArtworkURL: song.artworkURL)
                 lines = try await lyrics(for: lyricSong.id)
                 message = nil
             } catch {
@@ -189,6 +189,20 @@ public final class CloudLyricBarViewModel: ObservableObject {
         }
 
         return resolvedExternalSongs[ExternalSongKey(song: song)]
+    }
+
+    private func songWithPreferredArtwork(_ song: Song, fallbackArtworkURL: URL?) -> Song {
+        guard song.artworkURL == nil, let fallbackArtworkURL else {
+            return song
+        }
+
+        return Song(
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            artworkURL: fallbackArtworkURL
+        )
     }
 
     private func lyricSource(for song: Song) async throws -> Song {
