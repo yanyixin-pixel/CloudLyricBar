@@ -18,6 +18,7 @@ public final class CloudLyricBarViewModel: ObservableObject {
     private let nowPlayingProvider: (any NowPlayingProviding)?
     private var cachedLyrics: [String: [LyricLine]] = [:]
     private var resolvedExternalSongs: [ExternalSongKey: Song] = [:]
+    private var artworkURLsByExternalSong: [ExternalSongKey: URL] = [:]
     private var latestNowPlaying: NowPlayingSnapshot?
     private var latestClientRunning = false
     private var applyRevision = 0
@@ -43,7 +44,14 @@ public final class CloudLyricBarViewModel: ObservableObject {
         latestClientRunning = isClientRunning
         playback = nowPlaying.playback
 
+        if let song = nowPlaying.song, let artworkURL = song.artworkURL {
+            artworkURLsByExternalSong[ExternalSongKey(song: song)] = artworkURL
+        }
+
         var displaySong = nowPlaying.song
+        if let song = displaySong {
+            displaySong = songWithPreferredArtwork(song, fallbackArtworkURL: preferredArtworkURL(for: song))
+        }
         currentSong = displaySong
         let cachedSource = displaySong.flatMap(cachedLyricSource)
         let canRenderFromCache = cachedSource.flatMap { cachedLyrics[$0.id] } != nil
@@ -61,7 +69,7 @@ public final class CloudLyricBarViewModel: ObservableObject {
             do {
                 let lyricSong = try await lyricSource(for: song)
                 guard isCurrentApply(revision) else { return }
-                displaySong = songWithPreferredArtwork(lyricSong, fallbackArtworkURL: song.artworkURL)
+                displaySong = songWithPreferredArtwork(lyricSong, fallbackArtworkURL: preferredArtworkURL(for: song))
                 lines = try await lyrics(for: lyricSong.id)
                 guard isCurrentApply(revision) else { return }
                 message = nil
@@ -199,6 +207,10 @@ public final class CloudLyricBarViewModel: ObservableObject {
         }
 
         return resolvedExternalSongs[ExternalSongKey(song: song)]
+    }
+
+    private func preferredArtworkURL(for song: Song) -> URL? {
+        song.artworkURL ?? artworkURLsByExternalSong[ExternalSongKey(song: song)]
     }
 
     private func songWithPreferredArtwork(_ song: Song, fallbackArtworkURL: URL?) -> Song {

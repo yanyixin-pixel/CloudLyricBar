@@ -48,6 +48,10 @@ let cloudLyricBarViewModelTests: [TestCase] = [
         run: CloudLyricBarViewModelTests.testExternalNowPlayingPrefersLocalArtworkOverResolvedArtwork
     ),
     TestCase(
+        name: "CloudLyricBarViewModelTests.testExternalNowPlayingKeepsCachedArtworkWhenLaterSnapshotHasNone",
+        run: CloudLyricBarViewModelTests.testExternalNowPlayingKeepsCachedArtworkWhenLaterSnapshotHasNone
+    ),
+    TestCase(
         name: "CloudLyricBarViewModelTests.testStaleLyricLookupDoesNotOverwriteCurrentSong",
         run: CloudLyricBarViewModelTests.testStaleLyricLookupDoesNotOverwriteCurrentSong
     ),
@@ -321,6 +325,40 @@ enum CloudLyricBarViewModelTests {
         )
 
         try await expectEqual(model.currentSong?.artworkURL, localArtworkURL)
+    }
+
+    static func testExternalNowPlayingKeepsCachedArtworkWhenLaterSnapshotHasNone() async throws {
+        let artworkURL = URL(fileURLWithPath: "/tmp/cloudlyricbar-cached-cover.png")
+        let externalSongWithArtwork = Song(
+            id: "external:mediaremote:bad ones:Tate McRae",
+            title: "bad ones",
+            artist: "Tate McRae",
+            artworkURL: artworkURL
+        )
+        let externalSongWithoutArtwork = Song(
+            id: "external:mediaremote:bad ones:Tate McRae",
+            title: "bad ones",
+            artist: "Tate McRae"
+        )
+        let resolvedSong = Song(id: "resolved-bad-ones", title: "bad ones", artist: "Tate McRae")
+        let api = FakeNetEaseAPIClient(
+            searchResults: [resolvedSong],
+            lines: [
+                LyricLine(startTime: 0, text: "You say that you've been missing me")
+            ]
+        )
+        let model = await CloudLyricBarViewModel(apiClient: api)
+
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: externalSongWithArtwork, playback: .playing, position: 0),
+            isClientRunning: true
+        )
+        await model.apply(
+            nowPlaying: NowPlayingSnapshot(song: externalSongWithoutArtwork, playback: .playing, position: 0),
+            isClientRunning: true
+        )
+
+        try await expectEqual(model.currentSong?.artworkURL, artworkURL)
     }
 
     static func testStaleLyricLookupDoesNotOverwriteCurrentSong() async throws {
