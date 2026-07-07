@@ -61,6 +61,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <key>CFBundleName</key>
   <string>$APP_NAME</string>
   <key>CFBundleIconFile</key>
+  <string>AppIcon.icns</string>
+  <key>CFBundleIconName</key>
   <string>AppIcon</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
@@ -76,4 +78,5 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 </plist>
 PLIST
 
+touch "$APP_DIR"
 echo "Packaged: $APP_DIR"
